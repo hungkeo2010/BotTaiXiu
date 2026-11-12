@@ -57,7 +57,7 @@ pending_rut = {}
 ADMIN_IDS = [8682451039]
 
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
-GROUP_CHAT_ID = -1004222063034 
+GROUP_CHAT_ID = -1004222063034  
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
@@ -77,11 +77,12 @@ def get_user(user_id):
     if user_id not in users_db:
         users_db[user_id] = {
             "balance": 0,
-            "total_bet": 0,
+            "total_bet": 0,             # Tổng cược tích lũy từ trước đến nay
+            "required_turnover": 0,     # Tổng cược yêu cầu để được rút tiền
             "vip_points": 0,
             "vip_level": "Đồng 🥉",
             "is_newbie": True,  
-            "has_received_x2": False, # Theo dõi nạp X2 lần đầu
+            "has_received_x2": False,   # Theo dõi nạp X2 lần đầu
             "bank_info": None,  
             "history_nap": [],
             "history_rut": [],
@@ -122,9 +123,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_user(user_id)
     text = (
         f"🔵 **ID của bạn là `{user_id}`**\n\n"
-        f"🎁 **ĐẶC BIỆT:** Khuyến mãi **X2 (Nhân đôi)** cho lần nạp tiền đầu tiên!\n\n"
-        f"🏛️ Tham gia Room TX để săn hũ và nhận giftcode hằng ngày https://t.me/tuanhung88chat\n\n"
-        f"💙 Tham gia kênh thông báo để nhận code hàng ngày 💙"
+        f"🎁 **QUY ĐỊNH NẠP & RÚT:**\n"
+        f"• **Nạp lần đầu:** X2 số tiền (Yêu cầu vòng cược **x4** mới được rút)\n"
+        f"• **Nạp từ lần 2:** Yêu cầu vòng cược **x2** mới được rút\n\n"
+        f"🏛️ Tham gia Room TX để săn hũ và nhận giftcode hằng ngày https://t.me/tuanhung88chat"
     )
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=get_main_menu())
 
@@ -190,7 +192,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Mức cược tối thiểu là `100 VNĐ`!", parse_mode="Markdown")
             return
             
-        # Kiểm tra giới hạn tối đa 3M mỗi bên
         if session_bets[choice] >= 3000000:
             await update.message.reply_text(f"❌ Cửa này đã đạt mức tối đa `3.000.000 VNĐ` (Max 3m). Không nhận thêm cược!", parse_mode="Markdown")
             return
@@ -253,15 +254,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         x2_status = "Đã sử dụng ✅" if user.get("has_received_x2", False) else "Chưa sử dụng (Được X2 lần nạp đầu) 🔥"
+        req_turnover = user.get("required_turnover", 0)
+        current_total_bet = user["total_bet"]
+        
         info_text = (
             f"🏛️ **THÔNG TIN TÀI KHOẢN**\n"
             f"🆔 ID: `{user_id}`\n"
             f"🪙 Số dư hiện tại: `{user['balance']:,} VNĐ`\n"
             f"🎁 Khuyến mãi Nạp X2: `{x2_status}`\n"
+            f"📊 Vòng cược yêu cầu để rút: `{current_total_bet:,} / {req_turnover:,}đ`\n"
             f"👑 Cấp Vip: `{user['vip_level']}` (Điểm: {user['vip_points']})\n"
             f"🔰 Cấp bậc: {'Tân thủ (Max cược 10k)' if user['is_newbie'] else 'Chính thức (Không giới hạn)'}\n\n"
-            f"- Cược hôm nay: `{user['total_bet']:,}đ`\n"
-            f"- Tổng cược: `{user['total_bet']:,}đ`"
+            f"- Tổng cược tích lũy: `{current_total_bet:,}đ`"
         )
         await update.message.reply_text(info_text, parse_mode="Markdown", reply_markup=reply_markup)
 
@@ -275,7 +279,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        x2_notice = "🎁 **ĐẶC QUYỀN:** Lần nạp đầu tiên của bạn sẽ được **X2 (Nhân đôi)** giá trị tiền nạp!" if not user.get("has_received_x2", False) else ""
+        x2_notice = "🎁 **ĐẶC QUYỀN:** Nạp lần đầu X2 tiền và yêu cầu vòng cược x4 mới được rút!" if not user.get("has_received_x2", False) else "🎁 Nạp từ lần 2: Yêu cầu vòng cược x2 số tiền nạp để rút."
         nap_text = (
             "✨ **HỆ THỐNG NẠP TIỀN TỰ ĐỘNG**\n\n"
             f"{x2_notice}\n\n"
@@ -283,7 +287,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚠️ **Lưu ý:**\n"
             "✅ Chuyển đúng **SỐ TIỀN** và **NỘI DUNG** được cung cấp.\n"
             "✅ Mỗi lần nạp cần lấy thông tin **MỚI** (Mã nạp hết hạn sau **10 phút**).\n"
-            "🛑 Không dùng thông tin cũ cho giao dịch sau.\n"
             "📦 Nạp tối thiểu: **10.000đ**"
         )
         await update.message.reply_text(nap_text, parse_mode="Markdown", reply_markup=reply_markup)
@@ -328,7 +331,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🚀 **BẢNG XẾP HẠNG ĐUA TOP**\n1. Chưa có dữ liệu tuần này.")
 
     elif text == "🎁 Event":
-        await update.message.reply_text("🎁 Nhận code miễn phí mỗi ngày tại kênh thông báo sự kiện. Đặc biệt có chương trình Nạp X2 cho thành viên mới.")
+        await update.message.reply_text("🎁 Nhận code miễn phí mỗi ngày tại kênh thông báo sự kiện.")
 
     elif text == "🔍 Lệnh":
         help_text = (
@@ -436,6 +439,18 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     if rut_tien > user["balance"]:
         await update.message.reply_text("❌ Số dư tài khoản không đủ để rút số tiền này!")
+        return
+
+    # --- KIỂM TRA ĐIỀU KIỆN VÒNG CƯỢC (TURNOVER) ---
+    if user["total_bet"] < user["required_turnover"]:
+        con_thieu = user["required_turnover"] - user["total_bet"]
+        await update.message.reply_text(
+            f"❌ **CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN!**\n"
+            f"📊 Tổng cược hiện tại: `{user['total_bet']:,}đ`\n"
+            f"🎯 Vòng cược yêu cầu: `{user['required_turnover']:,}đ`\n"
+            f"⚠️ Bạn cần cược thêm ` {con_thieu:,}đ ` nữa mới được phép rút.",
+            parse_mode="Markdown"
+        )
         return
 
     user["balance"] -= rut_tien
@@ -802,16 +817,26 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         u = get_user(info["user_id"])
         u["is_newbie"] = False
         
-        # Khuyến mãi Nạp X2 lần đầu
-        thuc_nhan = info["amount"]
+        # --- HỆ THỐNG VÒNG CƯỢC & NẠP X2 ---
+        so_tien_nap = info["amount"]
+        thuc_nhan = so_tien_nap
         x2_msg = ""
+        
         if not u.get("has_received_x2", False):
-            thuc_nhan = info["amount"] * 2
+            # Nạp lần đầu: X2 số tiền nạp và yêu cầu vòng cược x4 tổng tiền nạp x2
+            thuc_nhan = so_tien_nap * 2
             u["has_received_x2"] = True
-            x2_msg = f"\n🎁 **Khuyến mãi X2 lần đầu:** Nhân đôi thành `+{thuc_nhan:,}đ`!"
+            vong_cuoc = (so_tien_nap * 2) * 4  # (Tiền nhận x2) nhân x4 vòng
+            u["required_turnover"] += vong_cuoc
+            x2_msg = f"\n🎁 **Khuyến mãi X2:** Nhận `{thuc_nhan:,}đ` | Yêu cầu cược x4 (`{vong_cuoc:,}đ`) để rút!"
+        else:
+            # Nạp từ lần 2 trở đi: Không nhân x2, yêu cầu vòng cược x2 số tiền nạp
+            vong_cuoc = so_tien_nap * 2
+            u["required_turnover"] += vong_cuoc
+            x2_msg = f"\n📌 **Nạp từ lần 2:** Yêu cầu cược x2 (`{vong_cuoc:,}đ`) để rút!"
 
         u["balance"] += thuc_nhan
-        u["history_nap"].append(f"Nạp thành công {info['amount']:,}đ (Thực nhận {thuc_nhan:,}đ)")
+        u["history_nap"].append(f"Nạp thành công {so_tien_nap:,}đ (Thực nhận {thuc_nhan:,}đ)")
         save_data()
         del pending_nap[ma_gd]
         
