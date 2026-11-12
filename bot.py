@@ -459,7 +459,7 @@ def main():
     # Xử lý tin nhắn và nút bấm
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     application.add_handler(CallbackQueryHandler(button_callback))
- if __name__ == "__main__":
+if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
 
