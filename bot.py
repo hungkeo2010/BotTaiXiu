@@ -453,16 +453,31 @@ def main():
     application.add_handler(CommandHandler("code", code_command))
     application.add_handler(CommandHandler("doidiemvip", doidiemvip_command))
     application.add_handler(CommandHandler("chinhxucxac", chinhxucxac_command))
-    
+    def main():
+    # Khởi tạo bot bằng Token
+    application = ApplicationBuilder().token(TOKEN).build()
+
+    # Đăng ký các lệnh
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("duyet", duyet_command))
+    application.add_handler(CommandHandler("taocode", taocode_command))
+    application.add_handler(CommandHandler("themcode", themcode_command))
+    application.add_handler(CommandHandler("xoacode", xoacode_command))
+    application.add_handler(CommandHandler("danhsachcode", danhsachcode_command))
+    application.add_handler(CommandHandler("muagift", muagift_command))
+    application.add_handler(CommandHandler("code", code_command))
+    application.add_handler(CommandHandler("doidiemvip", doidiemvip_command))
+    application.add_handler(CommandHandler("chinhxucxac", chinhxucxac_command))
+
     # Xử lý tin nhắn và nút bấm
-    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), message_handler))
     application.add_handler(CallbackQueryHandler(button_callback))
-if __name__ == "__main__":
+
+    # Chạy bot
     application.run_polling()
 
+if __name__ == "__main__":
+    main()
 
-
-
-
-
+ 
     
