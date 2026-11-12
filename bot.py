@@ -27,7 +27,7 @@ huvang_pool = 287500
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
 history_sessions = [] 
-loop_started = False  # Cờ chống chạy lặp vòng lặp
+loop_started = False  
 
 def get_user(user_id):
     if user_id not in users_db:
@@ -195,10 +195,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         game_text = (
             "🎮 **DANH SÁCH TRÒ CHƠI**\n"
             "Vô nhóm chơi: https://t.me/tuanhung88chat\n\n"
-            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài[span_0](start_span)[span_0](end_span).\n"
-            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu[span_1](start_span)[span_1](end_span).\n"
-            "- **C**: Tổng 3 viên XX là Chẵn[span_2](start_span)[span_2](end_span).\n"
-            "- **L**: Tổng 3 viên XX là Lẻ[span_3](start_span)[span_3](end_span).\n\n"
+            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài[span_2](start_span)[span_2](end_span).\n"
+            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu[span_3](start_span)[span_3](end_span).\n"
+            "- **C**: Tổng 3 viên XX là Chẵn[span_4](start_span)[span_4](end_span).\n"
+            "- **L**: Tổng 3 viên XX là Lẻ[span_5](start_span)[span_5](end_span).\n\n"
             "📌 **Tỷ lệ trả thưởng:**\n"
             "- T/X/C/L: x1.95\n"
             "👉 Tối thiểu 100 và tối đa mỗi bên 3.000.000"
@@ -346,7 +346,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-# --- VÒNG LẶP PHIÊN TÀI XỈU (CHỐNG LẶP TIẾN TRÌNH 100%) ---
+# --- VÒNG LẶP PHIÊN TÀI XỈU ---
 async def run_taixiu_loop(application):
     global current_session, session_bets, user_session_bets, huvang_pool, forced_dice_result, history_sessions
     
@@ -385,11 +385,13 @@ async def run_taixiu_loop(application):
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Hết thời gian đặt cược phiên #{current_session}**", parse_mode="Markdown")
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Bắt đầu tung XX phiên #{current_session}**", parse_mode="Markdown")
             
-            # --- XỬ LÝ KẾT QUẢ XÚC XẮC CHUẨN XÁC 100% ---
+            # --- XỬ LÝ KẾT QUẢ XÚC XẮC & LỆNH ÉP (ADMIN) ---
             if forced_dice_result == "TAI":
-                dices = (5, 5, 3)  # Tổng 13 (Tài)
+                # Ép Tài: Tổng điểm từ 11 đến 18
+                dices = (5, 5, 3)
             elif forced_dice_result == "XIU":
-                dices = (1, 2, 3)  # Tổng 6 (Xỉu)
+                # Ép Xỉu: Tổng điểm từ 3 đến 10
+                dices = (1, 2, 3)
             else:
                 dices = (random.randint(1, 6), random.randint(1, 6), random.randint(1, 6))
             
@@ -661,7 +663,7 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         forced_dice_result = None
         await update.message.reply_text("🔄 Đã reset xúc xắc ngẫu nhiên.")
 
-# --- KHỞI CHẠY CHÍNH (CHỐNG LẶP TIẾN TRÌNH) ---
+# --- KHỞI CHẠY CHÍNH (ĐÃ SỬA LỖI EVENT LOOP) ---
 TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
 
 async def post_init(application):
