@@ -65,11 +65,11 @@ current_session = 200000
 huvang_pool = 295000
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
-user_session_total_bet = {} # Lưu tổng tiền cược của mỗi user trong phiên hiện tại để xét điều kiện nhận thưởng
+user_session_total_bet = {} 
 history_sessions = [] 
 is_betting_open = False  
 lucky_number = 79        
-lucky_reward = 50000     # Tiền thưởng ngẫu nhiên của phiên
+lucky_reward = 50000     
 
 is_loop_running = False  
 
@@ -151,7 +151,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         choice = parts[0].upper()
         amount_str = parts[1].lower()
-        
+
+        # Ràng buộc cửa cược (Tài k được đặt Xỉu và ngược lại, Chẵn k được đặt Lẻ)
+        if user_id in user_session_bets:
+            current_user_bets = user_session_bets[user_id]
+            if choice == "T" and current_user_bets.get("X", 0) > 0:
+                await update.message.reply_text("❌ Bạn đã đặt cửa XỈU rồi, không thể đặt thêm TÀI trong phiên này!", parse_mode="Markdown")
+                return
+            if choice == "X" and current_user_bets.get("T", 0) > 0:
+                await update.message.reply_text("❌ Bạn đã đặt cửa TÀI rồi, không thể đặt thêm XỈU trong phiên này!", parse_mode="Markdown")
+                return
+            if choice == "C" and current_user_bets.get("L", 0) > 0:
+                await update.message.reply_text("❌ Bạn đã đặt cửa LẺ rồi, không thể đặt thêm CHẴN trong phiên này!", parse_mode="Markdown")
+                return
+            if choice == "L" and current_user_bets.get("C", 0) > 0:
+                await update.message.reply_text("❌ Bạn đã đặt cửa CHẴN rồi, không thể đặt thêm LẺ trong phiên này!", parse_mode="Markdown")
+                return
+
         if amount_str in ["max", "all"]:
             bet_amount = user["balance"]
             if user["is_newbie"] and bet_amount > 10000:
@@ -171,9 +187,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if bet_amount < 100:
             await update.message.reply_text("❌ Mức cược tối thiểu là `100 VNĐ`!", parse_mode="Markdown")
             return
-        if bet_amount > 3000000:
-            await update.message.reply_text("❌ Mức cược tối đa mỗi bên là `3.000.000 VNĐ`!", parse_mode="Markdown")
+            
+        # Kiểm tra nếu cửa đã đạt max 3M hoặc vượt quá giới hạn 3M
+        if session_bets[choice] >= 3000000:
+            await update.message.reply_text(f"❌ Cửa này đã đạt mức tối đa `3.000.000 VNĐ` (Max 3m). Không nhận thêm cược!", parse_mode="Markdown")
             return
+            
+        if session_bets[choice] + bet_amount > 3000000:
+            allowed_max = 3000000 - session_bets[choice]
+            await update.message.reply_text(f"❌ Cửa này đã gần đạt mốc 3M! Bạn chỉ có thể đặt tối đa thêm `{allowed_max:,} VNĐ`.", parse_mode="Markdown")
+            return
+
         if user["is_newbie"] and bet_amount > 10000:
             await update.message.reply_text("⚠️ Bạn đang là Tân thủ (Giới hạn cược max 10k). Vui lòng nạp 50k để mở khóa toàn bộ hạn mức!", parse_mode="Markdown")
             return
@@ -190,7 +214,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_session_bets[user_id] = {"T": 0, "X": 0, "C": 0, "L": 0}
         user_session_bets[user_id][choice] += bet_amount
 
-        # Cộng tổng tiền cược của user trong phiên để xét điều kiện nhận thưởng (yêu cầu >= 20k)
         user_session_total_bet[user_id] = user_session_total_bet.get(user_id, 0) + bet_amount
 
         await update.message.reply_text(
@@ -304,9 +327,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text = (
             "📜 **DANH SÁCH LỆNH**\n\n"
             "🎲 **Game Tài Xỉu:**\n"
-            "• `T/X/C/L [tiền]` (VD: `T 10k`, `T all`) — Cược Tài/Xỉu/Chẵn/Lẻ\n"
+            "• `T/X/C/L [tiền]` (VD: `T 10k`, `T all`) — Cược Tài/Xỉu/Chẵn/Lẻ (Max 3M/bên)\n"
             "• `/lamcai [số tiền]` — Làm cái (1M - 5M)\n"
             "• `/nhanthuong` — Nhận thưởng sự kiện (Cần cược tối thiểu 20k trong phiên)\n"
+            "• `/muagift [số_lượng] [mệnh_giá]` — Mua giftcode tự động từ số dư (VD: `/muagift 1 10000`)\n"
             "• `/sd` hoặc `/sodu` — Kiểm tra số dư\n\n"
             "💰 **TÀI KHOẢN:**\n"
             "• `/nap [tiền]` — Nạp tiền\n"
@@ -349,7 +373,6 @@ async def nhanthuong_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user = get_user(user_id)
     user_id_str = str(user_id)
     
-    # Kiểm tra điều kiện: User phải cược tổng tối thiểu 20.000đ trong phiên hiện tại
     user_bet_in_session = user_session_total_bet.get(user_id, 0)
     if user_bet_in_session < 20000:
         await update.message.reply_text(
@@ -499,10 +522,9 @@ async def run_taixiu_loop(application):
     while True:
         session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
         user_session_bets = {}
-        user_session_total_bet = {}  # Reset tổng cược của các user cho phiên mới
+        user_session_total_bet = {}  
         is_betting_open = True  
         
-        # Sinh ngẫu nhiên số may mắn (00-99) và tiền thưởng ngẫu nhiên (từ 10k đến 100k)
         lucky_number = random.randint(0, 99)
         lucky_reward = random.choice([10000, 20000, 30000, 50000, 70000, 100000])
         
@@ -578,7 +600,6 @@ async def run_taixiu_loop(application):
                 pass
         await asyncio.sleep(10)
         
-        # --- CHỐT CƯỚC (ĐÓNG CỬA CƯỚC VÀ KHÓA CHAT NHÓM) ---
         is_betting_open = False  
 
         if target_chat:
@@ -746,7 +767,6 @@ async def run_taixiu_loop(application):
                     reply_markup=InlineKeyboardMarkup(keyboard_kq)
                 )
                 
-                # Gửi thông báo số may mắn và tiền thưởng ngẫu nhiên cho phiên tiếp theo (yêu cầu cược >= 20k)
                 await application.bot.send_message(
                     chat_id=target_chat,
                     text=(
@@ -978,27 +998,40 @@ async def muagift_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user = get_user(user_id)
     if len(args) < 2:
+        await update.message.reply_text("⚠️ Dùng: `/muagift [số_lượng] [mệnh_giá]` (VD: `/muagift 1 10000`)", parse_mode="Markdown")
         return
     try:
         soluong, menh_gia = int(args[0]), int(args[1])
     except ValueError:
+        await update.message.reply_text("❌ Sai định dạng số lượng hoặc mệnh giá!")
         return
+
     available_codes = [code for code, val in giftcode_db.items() if val == menh_gia]
     if len(available_codes) < soluong:
-        await update.message.reply_text(f"❌ Kho chỉ còn {len(available_codes)} mã mệnh giá {menh_gia:,}đ.")
+        await update.message.reply_text(f"❌ Kho hiện chỉ còn {len(available_codes)} mã mệnh giá {menh_gia:,}đ.")
         return
-    tong_thanh_toan = int((soluong * menh_gia) * 1.05)
+
+    tong_thanh_toan = int((soluong * menh_gia) * 1.05) 
     if user["balance"] < tong_thanh_toan:
-        await update.message.reply_text(f"❌ Không đủ số dư! Cần `{tong_thanh_toan:,}đ` (gồm 5% phí).")
+        await update.message.reply_text(f"❌ Số dư không đủ! Cần `{tong_thanh_toan:,}đ` (gồm 5% phí giao dịch).")
         return
+
     user["balance"] -= tong_thanh_toan
     save_data()
+
     bought_codes = []
     for _ in range(soluong):
         c = available_codes.pop(0)
         del giftcode_db[c]
         bought_codes.append(c)
-    await update.message.reply_text(f"✅ **MUA THÀNH CÔNG!**\nMã của bạn: `" + ", ".join(bought_codes) + "`", parse_mode="Markdown")
+
+    await update.message.reply_text(
+        f"✅ **MUA GIFTCODE THÀNH CÔNG!**\n"
+        f"🎫 Mệnh giá: `{menh_gia:,}đ` x {soluong}\n"
+        f"💸 Trừ số dư: `{tong_thanh_toan:,}đ` (đã gồm 5% phí)\n"
+        f"🎁 Mã của bạn: `" + ", ".join(bought_codes) + "`",
+        parse_mode="Markdown"
+    )
 
 async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global forced_dice_result
@@ -1039,11 +1072,11 @@ async def main():
     application.add_handler(CommandHandler("trutien", thutien_command))
     application.add_handler(CommandHandler("lamcai", lamcai_command))
     application.add_handler(CommandHandler("nhanthuong", nhanthuong_command))
+    application.add_handler(CommandHandler("muagift", muagift_command))
     application.add_handler(CommandHandler("taocode", taocode_command))
     application.add_handler(CommandHandler("themcode", themcode_command))
     application.add_handler(CommandHandler("xoacode", xoacode_command))
     application.add_handler(CommandHandler("danhsachcode", danhsachcode_command))
-    application.add_handler(CommandHandler("muagift", muagift_command))
     application.add_handler(CommandHandler("code", code_command))
     application.add_handler(CommandHandler("nhapcode", code_command))
     application.add_handler(CommandHandler("chinhxucxac", chinhxucxac_command))
