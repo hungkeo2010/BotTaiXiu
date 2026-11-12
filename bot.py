@@ -453,7 +453,7 @@ def main():
     application.add_handler(CommandHandler("code", code_command))
     application.add_handler(CommandHandler("doidiemvip", doidiemvip_command))
     application.add_handler(CommandHandler("chinhxucxac", chinhxucxac_command))
-    def main():
+def main():
     # Khởi tạo bot bằng Token
     application = ApplicationBuilder().token(TOKEN).build()
 
