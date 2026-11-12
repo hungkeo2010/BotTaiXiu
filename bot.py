@@ -249,6 +249,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🎁 Nhận code miễn phí mỗi ngày tại kênh thông báo sự kiện.")
 
     elif text == "🔍 Lệnh":
+        # HOÀN TOÀN SẠCH SẼ - CHỈ GIỮ LẠI CÁC LỆNH DÀNH CHO THÀNH VIÊN NGƯỜI CHƠI
         help_text = (
             "📜 **DANH SÁCH LỆNH**\n\n"
             "🎲 **Game Tài Xỉu:**\n"
@@ -627,7 +628,7 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("🔄 Đã reset xúc xắc ngẫu nhiên.")
 
 # --- KHỞI CHẠY CHÍNH ---
-TOKEN = "9286450426:AAHYoubtmQirYbLnmmN3090ea81sABUrxsA"
+TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
 
 async def main_async():
     application = ApplicationBuilder().token(TOKEN).build()
