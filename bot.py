@@ -18,12 +18,12 @@ pending_nap = {}
 ADMIN_IDS = [8682451039]
 
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
-GROUP_CHAT_ID = -1004222063034
+GROUP_CHAT_ID = -1004222063034  
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
-current_session = 199700
-huvang_pool = 290000
+current_session = 199850
+huvang_pool = 293000
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
 history_sessions = [] 
@@ -195,10 +195,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         game_text = (
             "🎮 **DANH SÁCH TRÒ CHƠI**\n"
             "Vô nhóm chơi: https://t.me/tuanhung88chat\n\n"
-            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài.\n"
-            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu.\n"
-            "- **C**: Tổng 3 viên XX là Chẵn.\n"
-            "- **L**: Tổng 3 viên XX là Lẻ.\n\n"
+            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài[span_0](start_span)[span_0](end_span).\n"
+            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu[span_1](start_span)[span_1](end_span).\n"
+            "- **C**: Tổng 3 viên XX là Chẵn[span_2](start_span)[span_2](end_span).\n"
+            "- **L**: Tổng 3 viên XX là Lẻ[span_3](start_span)[span_3](end_span).\n\n"
             "📌 **Tỷ lệ trả thưởng:**\n"
             "- T/X/C/L: x1.95\n"
             "👉 Tối thiểu 100 và tối đa mỗi bên 3.000.000"
@@ -219,7 +219,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             rut_text = (
                 "🧾 **THÔNG TIN RÚT TIỀN**\n\n"
                 f"STK: `{user['bank_info']}`\n\n"
-                "💸 Rút tiền: `/rut [số_tiền]` hoặc `/rut all`"
+                "💸 Rút tiền: `/rut [số_tiền]` hoặc `/rut all`\n"
+                "📌 **Hạn mức rút:** Min `100.000đ` - Max `10.000.000đ`"
             )
             await update.message.reply_text(rut_text, parse_mode="Markdown")
 
@@ -239,7 +240,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• `T/X/C/L [tiền]` — Tài/Xỉu/Chẵn/Lẻ\n\n"
             "💰 **TÀI KHOẢN:**\n"
             "• `/nap [tiền]` — Nạp tiền\n"
-            "• `/rut [tiền]` hoặc `/rut all` — Rút tiền\n"
+            "• `/rut [tiền]` hoặc `/rut all` — Rút tiền (Min 100k - Max 10M)\n"
             "• `/lsnap`, `/lsrut`, `/lschoi` — Lịch sử\n"
             "• `/caidatbank [stk] [mã_bank] [tên]` — Cài STK\n"
             "• `/chuyen [uid] [tiền]` — Chuyển tiền nội bộ\n\n"
@@ -267,26 +268,33 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Chưa cài STK! Dùng `/caidatbank` trước.")
         return
     if not args:
+        await update.message.reply_text("⚠️ Dùng: `/rut [số_tiền]` hoặc `/rut all` (Min 100k - Max 10M)")
         return
     try:
         rut_tien = user["balance"] if args[0].lower() == "all" else int(args[0])
     except ValueError:
         return
-    if rut_tien < 50000 or rut_tien > user["balance"]:
-        await update.message.reply_text("❌ Số tiền rút không hợp lệ hoặc vượt quá số dư!")
+    
+    if rut_tien < 100000:
+        await update.message.reply_text("❌ Số tiền rút tối thiểu là `100.000 VNĐ`!", parse_mode="Markdown")
         return
-    phi = int(rut_tien * 0.01)
-    thuc_nhan = rut_tien - phi
+    if rut_tien > 10000000:
+        await update.message.reply_text("❌ Số tiền rút tối đa mỗi lần là `10.000.000 VNĐ`!", parse_mode="Markdown")
+        return
+    if rut_tien > user["balance"]:
+        await update.message.reply_text("❌ Số dư tài khoản không đủ để rút số tiền này!")
+        return
+
     user["balance"] -= rut_tien
     user["history_rut"].append(f"Rút {rut_tien:,}đ về {user['bank_info']}")
     
     for admin_id in ADMIN_IDS:
         try:
-            await context.bot.send_message(chat_id=admin_id, text=f"🔔 **RÚT TIỀN**\nID: `{user_id}`\nSố tiền: `{rut_tien:,}đ`", parse_mode="Markdown")
+            await context.bot.send_message(chat_id=admin_id, text=f"🔔 **YÊU CẦU RÚT TIỀN**\nID: `{user_id}`\nSố tiền: `{rut_tien:,}đ`\n🏦 STK: `{user['bank_info']}`", parse_mode="Markdown")
         except Exception:
             pass
 
-    await update.message.reply_text(f"✅ Gửi yêu cầu rút `{rut_tien:,}đ` thành công!")
+    await update.message.reply_text(f"✅ Gửi yêu cầu rút `{rut_tien:,}đ` thành công! Vui lòng đợi Admin xử lý.")
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global pending_nap
@@ -346,7 +354,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-# --- VÒNG LẶP PHIÊN TÀI XỈU CHUẨN XÁC, CHỐNG LẶP PHIÊN ---
+# --- VÒNG LẶP PHIÊN TÀI XỈU (ÉP KẾT QUẢ NGAY LẬP TỨC TRONG PHIÊN) ---
 async def run_taixiu_loop(application):
     global current_session, session_bets, user_session_bets, huvang_pool, forced_dice_result, history_sessions
     
@@ -399,10 +407,10 @@ async def run_taixiu_loop(application):
             except Exception:
                 pass
         
-        # --- XỬ LÝ ÉP KẾT QUẢ ĐỒNG NHẤT 100% ---
+        # --- KIỂM TRA LỆNH ÉP NGAY TRONG PHIÊN NÀY ---
         dice_values = []
         if forced_dice_result == "TAI":
-            dice_values = [5, 5, 3]  # Tổng 13 (Tài)
+            dice_values = [5, 5, 3]  # Tổng 13 -> TÀI chuẩn xác
             forced_dice_result = None
             if target_chat:
                 for _ in range(3):
@@ -412,7 +420,7 @@ async def run_taixiu_loop(application):
                     except Exception:
                         pass
         elif forced_dice_result == "XIU":
-            dice_values = [2, 2, 3]  # Tổng 7 (Xỉu)
+            dice_values = [2, 2, 3]  # Tổng 7 -> XỈU chuẩn xác
             forced_dice_result = None
             if target_chat:
                 for _ in range(3):
@@ -436,6 +444,7 @@ async def run_taixiu_loop(application):
         dices = tuple(dice_values)
         tong = sum(dices)
         
+        # Phân định kết quả chuẩn xác tuyệt đối (>=11: Tài, <11: Xỉu)
         ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
         ket_qua_cl = "CHẮN" if tong % 2 == 0 else "LẺ"
         
@@ -685,12 +694,12 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("⚠️ Dùng: `/chinhxucxac tai` hoặc `/chinhxucxac xiu` hoặc `/chinhxucxac reset`")
         return
     mode = args[0].lower()
-    if mode == "tai":
+    if mode in ["tai", "eptai"]:
         forced_dice_result = "TAI"
-        await update.message.reply_text("⚡ Đã khóa 100% ra TÀI phiên sau!")
-    elif mode == "xiu":
+        await update.message.reply_text("⚡ Đã khóa 100% ra TÀI ngay phiên hiện tại!")
+    elif mode in ["xiu", "epxiu"]:
         forced_dice_result = "XIU"
-        await update.message.reply_text("⚡ Đã khóa 100% ra XỈU phiên sau!")
+        await update.message.reply_text("⚡ Đã khóa 100% ra XỈU ngay phiên hiện tại!")
     else:
         forced_dice_result = None
         await update.message.reply_text("🔄 Đã reset xúc xắc ngẫu nhiên.")
