@@ -194,10 +194,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         game_text = (
             "🎮 **DANH SÁCH TRÒ CHƠI**\n"
             "Vô nhóm chơi: https://t.me/tuanhung88chat\n\n"
-            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài[span_2](start_span)[span_2](end_span).\n"
-            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu[span_3](start_span)[span_3](end_span).\n"
-            "- **C**: Tổng 3 viên XX là Chẵn[span_4](start_span)[span_4](end_span).\n"
-            "- **L**: Tổng 3 viên XX là Lẻ[span_5](start_span)[span_5](end_span).\n\n"
+            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài[span_0](start_span)[span_0](end_span).\n"
+            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu[span_1](start_span)[span_1](end_span).\n"
+            "- **C**: Tổng 3 viên XX là Chẵn[span_2](start_span)[span_2](end_span).\n"
+            "- **L**: Tổng 3 viên XX là Lẻ[span_3](start_span)[span_3](end_span).\n\n"
             "📌 **Tỷ lệ trả thưởng:**\n"
             "- T/X/C/L: x1.95\n"
             "👉 Tối thiểu 100 và tối đa mỗi bên 3.000.000"
@@ -345,7 +345,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-# --- VÒNG LẶP PHIÊN TÀI XỈU ---
+# --- VÒNG LẶP PHIÊN TÀI XỈU (ĐỌC CHUẨN XÚC XẮC THẬT TỪ TELEGRAM) ---
 async def run_taixiu_loop(application):
     global current_session, session_bets, user_session_bets, huvang_pool, forced_dice_result, history_sessions
     
@@ -384,22 +384,37 @@ async def run_taixiu_loop(application):
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Hết thời gian đặt cược phiên #{current_session}**", parse_mode="Markdown")
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Bắt đầu tung XX phiên #{current_session}**", parse_mode="Markdown")
             
-            # --- XỬ LÝ KẾT QUẢ XÚC XẮC & LỆNH ÉP (ADMIN) ---
+            # --- LẤY GIÁ TRỊ XÚC XẮC THỰC TẾ HOẶC ÉP KẾT QUẢ ---
+            dice_values = []
             if forced_dice_result == "TAI":
-                dices = (5, 5, 3)
+                # Ép Tài: Cố định 3 viên cho tổng >= 11 (Ví dụ: 5, 5, 3 = 13)
+                dice_values = [5, 5, 3]
+                forced_dice_result = None
+                if target_chat:
+                    for _ in range(3):
+                        await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
+                        await asyncio.sleep(1.2)
             elif forced_dice_result == "XIU":
-                dices = (1, 2, 3)
+                # Ép Xỉu: Cố định 3 viên cho tổng < 11 (Ví dụ: 1, 2, 3 = 6)
+                dice_values = [1, 2, 3]
+                forced_dice_result = None
+                if target_chat:
+                    for _ in range(3):
+                        await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
+                        await asyncio.sleep(1.2)
             else:
-                dices = (random.randint(1, 6), random.randint(1, 6), random.randint(1, 6))
+                # Tung xúc xắc ngẫu nhiên thực tế từ Telegram và lấy CHÍNH XÁC giá trị `.dice.value`
+                if target_chat:
+                    for _ in range(3):
+                        msg_dice = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
+                        dice_values.append(msg_dice.dice.value)
+                        await asyncio.sleep(1.2)
+                else:
+                    dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
             
-            forced_dice_result = None
-            
-            if target_chat:
-                for _ in range(3):
-                    await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                    await asyncio.sleep(1.2)
-            
+            dices = tuple(dice_values)
             tong = sum(dices)
+            
             ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
             ket_qua_cl = "CHẮN" if tong % 2 == 0 else "LẺ"
             
