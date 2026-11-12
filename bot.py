@@ -1,5 +1,3 @@
-import nest_asyncio
-nest_asyncio.apply()
 import logging
 import random
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
