@@ -18,16 +18,16 @@ pending_nap = {}
 ADMIN_IDS = [8682451039]
 
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
-GROUP_CHAT_ID = -1004222063034
+GROUP_CHAT_ID = -1004222063034 
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
-current_session = 199600
-huvang_pool = 288000
+current_session = 199700
+huvang_pool = 290000
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
 history_sessions = [] 
-is_loop_running = False  # Cờ chống lặp tiến trình toàn cục
+is_loop_running = False  
 
 def get_user(user_id):
     if user_id not in users_db:
@@ -195,10 +195,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         game_text = (
             "🎮 **DANH SÁCH TRÒ CHƠI**\n"
             "Vô nhóm chơi: https://t.me/tuanhung88chat\n\n"
-            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài[span_0](start_span)[span_0](end_span).\n"
-            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu[span_1](start_span)[span_1](end_span).\n"
-            "- **C**: Tổng 3 viên XX là Chẵn[span_2](start_span)[span_2](end_span).\n"
-            "- **L**: Tổng 3 viên XX là Lẻ[span_3](start_span)[span_3](end_span).\n\n"
+            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài.\n"
+            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu.\n"
+            "- **C**: Tổng 3 viên XX là Chẵn.\n"
+            "- **L**: Tổng 3 viên XX là Lẻ.\n\n"
             "📌 **Tỷ lệ trả thưởng:**\n"
             "- T/X/C/L: x1.95\n"
             "👉 Tối thiểu 100 và tối đa mỗi bên 3.000.000"
@@ -346,7 +346,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-# --- VÒNG LẶP PHIÊN TÀI XỈU (BẢO VỆ CHỐNG LẶP TIẾN TRÌNH TUYỆT ĐỐI) ---
+# --- VÒNG LẶP PHIÊN TÀI XỈU CHUẨN XÁC, CHỐNG LẶP PHIÊN ---
 async def run_taixiu_loop(application):
     global current_session, session_bets, user_session_bets, huvang_pool, forced_dice_result, history_sessions
     
@@ -372,7 +372,6 @@ async def run_taixiu_loop(application):
             except Exception:
                 pass
         
-        # Đếm ngược tuần tự chống lệch
         await asyncio.sleep(20)
         if target_chat:
             try:
@@ -400,10 +399,10 @@ async def run_taixiu_loop(application):
             except Exception:
                 pass
         
-        # --- XỬ LÝ XÚC XẮC ---
+        # --- XỬ LÝ ÉP KẾT QUẢ ĐỒNG NHẤT 100% ---
         dice_values = []
         if forced_dice_result == "TAI":
-            dice_values = [5, 5, 3]
+            dice_values = [5, 5, 3]  # Tổng 13 (Tài)
             forced_dice_result = None
             if target_chat:
                 for _ in range(3):
@@ -413,7 +412,7 @@ async def run_taixiu_loop(application):
                     except Exception:
                         pass
         elif forced_dice_result == "XIU":
-            dice_values = [1, 2, 3]
+            dice_values = [2, 2, 3]  # Tổng 7 (Xỉu)
             forced_dice_result = None
             if target_chat:
                 for _ in range(3):
@@ -697,7 +696,7 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("🔄 Đã reset xúc xắc ngẫu nhiên.")
 
 # --- KHỞI CHẠY CHÍNH BẢO VỆ CHỐNG LẶP (LOCK FLAG) ---
-TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
+TOKEN = "9119986491:AAG_LxcqiNMONdH1CxPm1t66HcVP5PqeYwI"
 
 async def main():
     global is_loop_running
@@ -722,7 +721,6 @@ async def main():
     await application.initialize()
     await application.start()
     
-    # Chỉ cho phép khởi động duy nhất 1 vòng lặp phiên duy nhất
     if not is_loop_running:
         is_loop_running = True
         asyncio.create_task(run_taixiu_loop(application))
