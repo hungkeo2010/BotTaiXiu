@@ -22,11 +22,12 @@ GROUP_CHAT_ID = None
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
-current_session = 199571
-huvang_pool = 287100
+current_session = 199580
+huvang_pool = 287500
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
 history_sessions = [] 
+loop_started = False  # Cờ chống chạy lặp vòng lặp
 
 def get_user(user_id):
     if user_id not in users_db:
@@ -211,14 +212,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not user["bank_info"]:
             await update.message.reply_text(
                 "⚠️ Bạn chưa cài đặt tài khoản ngân hàng nhận tiền!\n\n"
-                "👉 Vui lòng sử dụng cú pháp để cài đặt:\n"
-                "`/caidatbank [stk] [ngân_hàng] [tên_chủ_tài_khoản]`",
+                "👉 Dùng cú pháp: `/caidatbank [stk] [ngân_hàng] [tên]`",
                 parse_mode="Markdown"
             )
         else:
             rut_text = (
                 "🧾 **THÔNG TIN RÚT TIỀN**\n\n"
-                f"STK đã cài đặt của bạn:\n`{user['bank_info']}`\n\n"
+                f"STK: `{user['bank_info']}`\n\n"
                 "💸 Rút tiền: `/rut [số_tiền]` hoặc `/rut all`"
             )
             await update.message.reply_text(rut_text, parse_mode="Markdown")
@@ -254,7 +254,7 @@ async def caidatbank_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user = get_user(user_id)
     args = context.args
     if len(args) < 3:
-        await update.message.reply_text("⚠️ Sai cú pháp! Dùng: `/caidatbank [stk] [ngân_hàng] [tên]`", parse_mode="Markdown")
+        await update.message.reply_text("⚠️ Dùng: `/caidatbank [stk] [ngân_hàng] [tên]`", parse_mode="Markdown")
         return
     user["bank_info"] = f"{args[0]} - {args[1].upper()} - {' '.join(args[2:]).upper()}"
     await update.message.reply_text(f"✅ Đã cài đặt STK thành công: `{user['bank_info']}`", parse_mode="Markdown")
@@ -267,7 +267,6 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Chưa cài STK! Dùng `/caidatbank` trước.")
         return
     if not args:
-        await update.message.reply_text("⚠️ Dùng: `/rut [số_tiền]` hoặc `/rut all`")
         return
     try:
         rut_tien = user["balance"] if args[0].lower() == "all" else int(args[0])
@@ -283,21 +282,7 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     for admin_id in ADMIN_IDS:
         try:
-            await context.bot.send_message(
-                chat_id=admin_id,
-                text=f"🔔 **YÊU CẦU RÚT TIỀN**\n👤 ID: `{user_id}`\n💸 Số tiền: `{rut_tien:,}đ`\n🏦 STK: `{user['bank_info']}`",
-                parse_mode="Markdown"
-            )
-        except Exception:
-            pass
-
-    if GROUP_CHAT_ID:
-        try:
-            await context.bot.send_message(
-                chat_id=GROUP_CHAT_ID,
-                text=f"💳 **THÔNG BÁO RÚT TIỀN**\n👤 Người chơi ID: `{user_id}` vừa rút `{rut_tien:,} VNĐ` thành công!",
-                parse_mode="Markdown"
-            )
+            await context.bot.send_message(chat_id=admin_id, text=f"🔔 **RÚT TIỀN**\nID: `{user_id}`\nSố tiền: `{rut_tien:,}đ`", parse_mode="Markdown")
         except Exception:
             pass
 
@@ -317,21 +302,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         for admin_id in ADMIN_IDS:
             try:
-                await context.bot.send_message(
-                    chat_id=admin_id,
-                    text=f"🔔 **MÃ NẠP MỚI**\n👤 ID: `{user_id}`\n💵 Số tiền: `{amount:,}đ`\n📝 Nội dung: `NAP{user_id}{magd}`\n🔑 Mã: `{magd}`\n👉 `/duyệt {magd}`",
-                    parse_mode="Markdown"
-                )
+                await context.bot.send_message(chat_id=admin_id, text=f"🔔 **MÃ NẠP MỚI**\nID: `{user_id}`\nTiền: `{amount:,}đ`\nMã: `{magd}`\n👉 `/duyệt {magd}`", parse_mode="Markdown")
             except Exception:
                 pass
 
         keyboard = [[InlineKeyboardButton("🐸 Nạp tiền tại đây", url="https://t.me/tuanhung88chat")]]
         await query.message.reply_text(
-            f"➕ **THÔNG TIN NẠP {amount:,} VNĐ**\n"
-            f"🏦 MBBANK | STK: `0328122738`\n"
-            f"💰 Chủ TK: LUC THUY LINH\n"
-            f"📝 Nội dung: `NAP{user_id}{magd}`\n"
-            f"⏰ Hạn: 10 phút.",
+            f"➕ **THÔNG TIN NẠP {amount:,} VNĐ**\nMBBANK | STK: `0328122738`\nNội dung: `NAP{user_id}{magd}`",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -356,20 +333,20 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         u = get_user(user_id)
         t = int(u["total_bet"] * 0.004)
         u["balance"] += t
-        await query.message.reply_text(f"🎁 Nhận hoàn cược ngày: `+{t:,}đ`", parse_mode="Markdown")
+        await query.message.reply_text(f"🎁 Nhận hoàn cược: `+{t:,}đ`", parse_mode="Markdown")
     elif data == "ho_tro":
-        await query.message.reply_text("🎧 Hỗ trợ 24/7 qua CSKH.")
+        await query.message.reply_text("🎧 Hỗ trợ 24/7.")
     elif data == "nap_nganhang":
         magd = random.randint(100000, 999999)
         pending_nap[str(magd)] = {"user_id": user_id, "amount": 50000}
         keyboard = [[InlineKeyboardButton("🐸 Nạp tiền tại đây", url="https://t.me/tuanhung88chat")]]
         await query.message.reply_text(
-            f"➕ **THÔNG TIN NẠP 50,000 VNĐ**\n🏦 MBBANK | STK: `0328122738`\n📝 Nội dung: `NAP{user_id}{magd}`",
+            f"➕ **THÔNG TIN NẠP 50,000 VNĐ**\nMBBANK | STK: `0328122738`\nNội dung: `NAP{user_id}{magd}`",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-# --- VÒNG LẶP PHIÊN TÀI XỈU (ĐÃ SỬA LỖI ÉP XÚC XẮC CHUẨN XÁC 100%) ---
+# --- VÒNG LẶP PHIÊN TÀI XỈU (CHỐNG LẶP TIẾN TRÌNH 100%) ---
 async def run_taixiu_loop(application):
     global current_session, session_bets, user_session_bets, huvang_pool, forced_dice_result, history_sessions
     
@@ -408,20 +385,16 @@ async def run_taixiu_loop(application):
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Hết thời gian đặt cược phiên #{current_session}**", parse_mode="Markdown")
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Bắt đầu tung XX phiên #{current_session}**", parse_mode="Markdown")
             
-            # --- XỬ LÝ KẾT QUẢ XÚC XẮC & LỆNH ÉP (ADMIN) ---
+            # --- XỬ LÝ KẾT QUẢ XÚC XẮC CHUẨN XÁC 100% ---
             if forced_dice_result == "TAI":
-                # Ép Tài: Tổng điểm từ 11 đến 18 (Ví dụ: 5, 5, 3 = 13)
-                dices = (5, 5, 3)
+                dices = (5, 5, 3)  # Tổng 13 (Tài)
             elif forced_dice_result == "XIU":
-                # Ép Xỉu: Tổng điểm từ 3 đến 10 (Ví dụ: 1, 2, 3 = 6)
-                dices = (1, 2, 3)
+                dices = (1, 2, 3)  # Tổng 6 (Xỉu)
             else:
-                # Ngẫu nhiên tự nhiên
                 dices = (random.randint(1, 6), random.randint(1, 6), random.randint(1, 6))
             
             forced_dice_result = None
             
-            # Gửi hiệu ứng xúc xắc lên nhóm (gửi lần lượt 3 viên)
             if target_chat:
                 for _ in range(3):
                     await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
@@ -443,7 +416,6 @@ async def run_taixiu_loop(application):
             tong_thang = 0
             tong_thua = 0
             
-            # QUYẾT TOÁN THẮNG THUA CHUẨN XÁC 100%
             for u_id, bets in user_session_bets.items():
                 u = get_user(u_id)
                 thang_user = 0
@@ -566,7 +538,7 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         u["history_nap"].append(f"Nạp thành công {info['amount']:,}đ")
         del pending_nap[ma_gd]
         try:
-            await context.bot.send_message(chat_id=info["user_id"], text=f"✅ **NẠP TIỀN THÀNH CÔNG!**\nCộng `+{info['amount']:,} VNĐ`.", parse_mode="Markdown")
+            await context.bot.send_message(chat_id=info["user_id"], text=f"✅ **NẠP THÀNH CÔNG!**\nCộng `+{info['amount']:,}đ`", parse_mode="Markdown")
         except Exception:
             pass
         await update.message.reply_text(f"✅ Đã duyệt mã #{ma_gd} thành công!")
@@ -587,7 +559,6 @@ async def taocode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     args = context.args
     if len(args) < 2:
-        await update.message.reply_text("⚠️ Cú pháp: `/taocode [số_lượng] [tiền]`")
         return
     try:
         soluong, tien = int(args[0]), int(args[1])
@@ -690,11 +661,17 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         forced_dice_result = None
         await update.message.reply_text("🔄 Đã reset xúc xắc ngẫu nhiên.")
 
-# --- KHỞI CHẠY CHÍNH ---
+# --- KHỞI CHẠY CHÍNH (CHỐNG LẶP TIẾN TRÌNH) ---
 TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
 
-async def main_async():
-    application = ApplicationBuilder().token(TOKEN).build()
+async def post_init(application):
+    global loop_started
+    if not loop_started:
+        loop_started = True
+        asyncio.create_task(run_taixiu_loop(application))
+
+def main():
+    application = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
     
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("caidatbank", caidatbank_command))
@@ -712,20 +689,7 @@ async def main_async():
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     application.add_handler(CallbackQueryHandler(button_callback))
     
-    await application.initialize()
-    await application.start()
-    await application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
-    
-    asyncio.create_task(run_taixiu_loop(application))
-    
-    stop_signal = asyncio.get_running_loop().create_future()
-    await stop_signal
-
-def main():
-    try:
-        asyncio.run(main_async())
-    except (KeyboardInterrupt, SystemExit):
-        pass
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
     main()
