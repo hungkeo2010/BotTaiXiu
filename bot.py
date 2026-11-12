@@ -216,22 +216,20 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data == "choi_taixiu":
-        # CHƠI TÀI XỈU - TÍCH HỢP HACK CHUẨN XÁC 100% & NỔ HŨ X5 KHI RA (3,6) HOẶC (3,1)
         if forced_dice_result == "TAI":
-            dices = (5, 5, 6)  # Tổng 16 -> TÀI 100%
+            dices = (5, 5, 6)
         elif forced_dice_result == "XIU":
-            dices = (1, 2, 3)  # Tổng 6 -> XỈU 100%
+            dices = (1, 2, 3)
         else:
             dices = (random.randint(1, 6), random.randint(1, 6), random.randint(1, 6))
 
         tong = sum(dices)
         ket_qua = "TÀI" if tong >= 11 else "XỈU"
         
-        # Kiểm tra điều kiện nổ hũ X5 (nếu có xuất hiện cặp số 3 và 6, hoặc 3 và 1 trong kết quả xúc xắc)
         has_3_6 = (3 in dices and 6 in dices)
         has_3_1 = (3 in dices and 1 in dices)
         
-        bet_amount = 10000  # Mức cược mô phỏng trong phiên chơi
+        bet_amount = 10000
         no_hu_text = ""
         if has_3_6 or has_3_1:
             thuong_no_hu = bet_amount * 5
@@ -326,7 +324,7 @@ async def muagift_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     tong_goc = soluong * menh_gia
-    phi = int(tong_goc * 0.05)  # Phí 5%
+    phi = int(tong_goc * 0.05)
     tong_thanh_toan = tong_goc + phi
 
     if user["balance"] < tong_thanh_toan:
@@ -360,7 +358,7 @@ async def code_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if code in giftcode_db:
         val = giftcode_db[code]
         user["balance"] += val
-        del giftcode_db[code]  # Dùng xong tự động khóa/xóa
+        del giftcode_db[code]
         await update.message.reply_text(f"🎉 **NHẬP GIFTCODE THÀNH CÔNG!**\n🎁 Nhận được: `+{val:,} VNĐ` vào số dư.", parse_mode="Markdown")
     else:
         await update.message.reply_text("❌ Mã code không tồn tại hoặc đã được sử dụng!")
@@ -427,15 +425,17 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Cú pháp: `/duyệt [mã_nạp]`")
         return
     
-    ma_nạp = args[0]
+    ma_nap = args[0]
     for u_id, u_data in users_db.items():
-        u_data["is_newbie"] = False  # Thoát Tân thủ
+        u_data["is_newbie"] = False
         u_data["balance"] += 50000
-        u_data["history_nap"].append(f"Nạp thành công 50,000đ (Mã: #{ma_nạp})")
+        u_data["history_nap"].append(f"Nạp thành công 50,000đ (Mã: #{ma_nap})")
         break
 
-    await update.message.reply_text(f"✅ Duyệt thành công mã nạp #{ma_nạp}!\n✅ Đã cộng 50.000đ và **Thoát Tân Thủ** thành công (Mở khóa toàn bộ hạn mức 
-    TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
+    await update.message.reply_text(f"✅ Duyệt thành công mã nạp #{ma_nap}!\n✅ Đã cộng 50.000đ và **Thoát Tân Thủ** thành công (Mở khóa toàn bộ hạn mức).", parse_mode="Markdown")
+
+# --- HÀM KHỞI CHẠY CHÍNH ---
+TOKEN = "YOUR_BOT_TOKEN"
 
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
@@ -451,7 +451,7 @@ def main():
     application.add_handler(CommandHandler("code", code_command))
     application.add_handler(CommandHandler("doidiemvip", doidiemvip_command))
     application.add_handler(CommandHandler("chinhxucxac", chinhxucxac_command))
-    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), message_handler))
+    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     application.add_handler(CallbackQueryHandler(button_callback))
     
     application.run_polling()
