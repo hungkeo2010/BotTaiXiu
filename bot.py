@@ -435,10 +435,9 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         break
 
     await update.message.reply_text(f"✅ Duyệt thành công mã nạp #{ma_nạp}!\n✅ Đã cộng 50.000đ và **Thoát Tân Thủ** thành công (Mở khóa toàn bộ hạn mức cược)!")
-
+:# THAY THẾ "YOUR_TOKEN_HERE" 
+BẰNG TOKEN BOT TELEGRAM THẬT CỦA BẠNTOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
 def main():
-    # THAY THẾ "YOUR_TOKEN_HERE" BẰNG TOKEN BOT TELEGRAM THẬT CỦA BẠN
-    TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
     
     application = ApplicationBuilder().token(TOKEN).build()
 
