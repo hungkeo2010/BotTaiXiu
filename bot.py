@@ -1,5 +1,6 @@
 import logging
 import random
+import asyncio
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
@@ -435,9 +436,9 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"✅ Duyệt thành công mã nạp #{ma_nap}!\n✅ Đã cộng 50.000đ và **Thoát Tân Thủ** thành công (Mở khóa toàn bộ hạn mức).", parse_mode="Markdown")
 
 # --- HÀM KHỞI CHẠY CHÍNH ---
-TOKEN = "YOUR_BOT_TOKEN"
+TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
 
-def main():
+async def main_async():
     application = ApplicationBuilder().token(TOKEN).build()
     
     # Đăng ký các lệnh
@@ -454,7 +455,19 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     application.add_handler(CallbackQueryHandler(button_callback))
     
-    application.run_polling()
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+    
+    # Giữ bot chạy liên tục
+    stop_signal = asyncio.get_running_loop().create_future()
+    await stop_signal
+
+def main():
+    try:
+        asyncio.run(main_async())
+    except (KeyboardInterrupt, SystemExit):
+        pass
 
 if __name__ == "__main__":
     main()
