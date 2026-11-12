@@ -13,7 +13,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# --- TẠO WEB SERVER BẰNG FLASK ĐỂ UPTIMEROBOT NHẬN DIỆN 200 OK ---
+# --- TẠO WEB SERVER BẰNG FLASK ĐỂ UPTIMEROBOT NHẬN DIỆN 200 OK (CHỐNG LỖI 503) ---
 app = Flask(__name__)
 
 @app.route('/')
@@ -24,7 +24,7 @@ def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# Chạy web server ở luồng phụ (background thread)
+# Khởi chạy web server ở luồng phụ (background thread) độc lập tuyệt đối với bot
 threading.Thread(target=run_web_server, daemon=True).start()
 
 # --- QUẢN LÝ DỮ LIỆU BỀN VỮNG (LƯU RA FILE JSON) ---
@@ -57,7 +57,7 @@ pending_rut = {}
 ADMIN_IDS = [8682451039]
 
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
-GROUP_CHAT_ID = -1004222063034  
+GROUP_CHAT_ID = -1004222063034 
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
@@ -81,7 +81,7 @@ def get_user(user_id):
             "vip_points": 0,
             "vip_level": "Đồng 🥉",
             "is_newbie": True,  
-            "has_received_x2": False, # Theo dõi xem user đã dùng khuyến mãi nạp x2 lần đầu chưa
+            "has_received_x2": False, # Theo dõi nạp X2 lần đầu
             "bank_info": None,  
             "history_nap": [],
             "history_rut": [],
@@ -154,7 +154,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         choice = parts[0].upper()
         amount_str = parts[1].lower()
 
-        # Ràng buộc cửa cược (Tài k được đặt Xỉu và ngược lại, Chẵn k được đặt Lẻ)
+        # Kiểm tra ràng buộc cửa cược (Tài k được đặt Xỉu, Chẵn k được đặt Lẻ)
         if user_id in user_session_bets:
             current_user_bets = user_session_bets[user_id]
             if choice == "T" and current_user_bets.get("X", 0) > 0:
@@ -190,6 +190,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Mức cược tối thiểu là `100 VNĐ`!", parse_mode="Markdown")
             return
             
+        # Kiểm tra giới hạn tối đa 3M mỗi bên
         if session_bets[choice] >= 3000000:
             await update.message.reply_text(f"❌ Cửa này đã đạt mức tối đa `3.000.000 VNĐ` (Max 3m). Không nhận thêm cược!", parse_mode="Markdown")
             return
@@ -801,7 +802,7 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         u = get_user(info["user_id"])
         u["is_newbie"] = False
         
-        # --- TÍNH NĂNG KHUYẾN MÃI NẠP X2 LẦN ĐẦU ---
+        # Khuyến mãi Nạp X2 lần đầu
         thuc_nhan = info["amount"]
         x2_msg = ""
         if not u.get("has_received_x2", False):
