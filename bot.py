@@ -18,12 +18,12 @@ pending_nap = {}
 ADMIN_IDS = [8682451039]
 
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
-GROUP_CHAT_ID = -1004222063034
+GROUP_CHAT_ID =  -1004222063034
 
-# Biến toàn cục quản lý phiên Tài Xỉu
+#Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
-current_session = 199580
-huvang_pool = 287500
+current_session = 199582
+huvang_pool = 287800
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
 history_sessions = [] 
@@ -345,7 +345,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-# --- VÒNG LẶP PHIÊN TÀI XỈU (ĐỌC CHUẨN XÚC XẮC THẬT TỪ TELEGRAM) ---
+# --- VÒNG LẶP PHIÊN TÀI XỈU (ĐỒNG BỘ CHUẨN XÁC, KHÔNG LỆCH PHIÊN) ---
 async def run_taixiu_loop(application):
     global current_session, session_bets, user_session_bets, huvang_pool, forced_dice_result, history_sessions
     
@@ -369,6 +369,7 @@ async def run_taixiu_loop(application):
             if target_chat:
                 await application.bot.send_message(chat_id=target_chat, text=start_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard_start))
             
+            # Đếm ngược thời gian chuẩn xác từng mốc
             await asyncio.sleep(20)
             if target_chat:
                 await application.bot.send_message(chat_id=target_chat, text=f"🐸 **Còn 40 giây phiên #{current_session}**\n🔵 **TÀI**: {session_bets['T']:,}\n🔴 **XỈU**: {session_bets['X']:,}", parse_mode="Markdown")
@@ -384,31 +385,28 @@ async def run_taixiu_loop(application):
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Hết thời gian đặt cược phiên #{current_session}**", parse_mode="Markdown")
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Bắt đầu tung XX phiên #{current_session}**", parse_mode="Markdown")
             
-            # --- LẤY GIÁ TRỊ XÚC XẮC THỰC TẾ HOẶC ÉP KẾT QUẢ ---
+            # --- XỬ LÝ ÉP HOẶC TUNG XÚC XẮC ---
             dice_values = []
             if forced_dice_result == "TAI":
-                # Ép Tài: Cố định 3 viên cho tổng >= 11 (Ví dụ: 5, 5, 3 = 13)
-                dice_values = [5, 5, 3]
+                dice_values = [5, 5, 3]  # Tổng 13 (Tài)
                 forced_dice_result = None
                 if target_chat:
                     for _ in range(3):
                         await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                        await asyncio.sleep(1.2)
+                        await asyncio.sleep(1.0)
             elif forced_dice_result == "XIU":
-                # Ép Xỉu: Cố định 3 viên cho tổng < 11 (Ví dụ: 1, 2, 3 = 6)
-                dice_values = [1, 2, 3]
+                dice_values = [1, 2, 3]  # Tổng 6 (Xỉu)
                 forced_dice_result = None
                 if target_chat:
                     for _ in range(3):
                         await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                        await asyncio.sleep(1.2)
+                        await asyncio.sleep(1.0)
             else:
-                # Tung xúc xắc ngẫu nhiên thực tế từ Telegram và lấy CHÍNH XÁC giá trị `.dice.value`
                 if target_chat:
                     for _ in range(3):
-                        msg_dice = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                        dice_values.append(msg_dice.dice.value)
-                        await asyncio.sleep(1.2)
+                        msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
+                        dice_values.append(msg_d.dice.value)
+                        await asyncio.sleep(1.0)
                 else:
                     dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
             
@@ -430,6 +428,7 @@ async def run_taixiu_loop(application):
             tong_thang = 0
             tong_thua = 0
             
+            # QUYẾT TOÁN CƯỢC CHO TỪNG USER
             for u_id, bets in user_session_bets.items():
                 u = get_user(u_id)
                 thang_user = 0
