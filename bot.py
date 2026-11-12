@@ -57,7 +57,7 @@ pending_rut = {}
 ADMIN_IDS = [8682451039]
 
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
-GROUP_CHAT_ID = -1004222063034 
+GROUP_CHAT_ID = -1004222063034  
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
@@ -81,6 +81,7 @@ def get_user(user_id):
             "vip_points": 0,
             "vip_level": "Đồng 🥉",
             "is_newbie": True,  
+            "has_received_x2": False, # Theo dõi xem user đã dùng khuyến mãi nạp x2 lần đầu chưa
             "bank_info": None,  
             "history_nap": [],
             "history_rut": [],
@@ -121,6 +122,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_user(user_id)
     text = (
         f"🔵 **ID của bạn là `{user_id}`**\n\n"
+        f"🎁 **ĐẶC BIỆT:** Khuyến mãi **X2 (Nhân đôi)** cho lần nạp tiền đầu tiên!\n\n"
         f"🏛️ Tham gia Room TX để săn hũ và nhận giftcode hằng ngày https://t.me/tuanhung88chat\n\n"
         f"💙 Tham gia kênh thông báo để nhận code hàng ngày 💙"
     )
@@ -188,7 +190,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Mức cược tối thiểu là `100 VNĐ`!", parse_mode="Markdown")
             return
             
-        # Kiểm tra nếu cửa đã đạt max 3M hoặc vượt quá giới hạn 3M
         if session_bets[choice] >= 3000000:
             await update.message.reply_text(f"❌ Cửa này đã đạt mức tối đa `3.000.000 VNĐ` (Max 3m). Không nhận thêm cược!", parse_mode="Markdown")
             return
@@ -199,7 +200,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         if user["is_newbie"] and bet_amount > 10000:
-            await update.message.reply_text("⚠️ Bạn đang là Tân thủ (Giới hạn cược max 10k). Vui lòng nạp 50k để mở khóa toàn bộ hạn mức!", parse_mode="Markdown")
+            await update.message.reply_text("⚠️ Bạn đang là Tân thủ (Giới hạn cược max 10k). Vui lòng nạp tiền để mở khóa toàn bộ hạn mức!", parse_mode="Markdown")
             return
         if user["balance"] < bet_amount:
             await update.message.reply_text("❌ Số dư tài khoản không đủ để đặt cược số tiền này!", parse_mode="Markdown")
@@ -250,10 +251,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
+        x2_status = "Đã sử dụng ✅" if user.get("has_received_x2", False) else "Chưa sử dụng (Được X2 lần nạp đầu) 🔥"
         info_text = (
             f"🏛️ **THÔNG TIN TÀI KHOẢN**\n"
             f"🆔 ID: `{user_id}`\n"
             f"🪙 Số dư hiện tại: `{user['balance']:,} VNĐ`\n"
+            f"🎁 Khuyến mãi Nạp X2: `{x2_status}`\n"
             f"👑 Cấp Vip: `{user['vip_level']}` (Điểm: {user['vip_points']})\n"
             f"🔰 Cấp bậc: {'Tân thủ (Max cược 10k)' if user['is_newbie'] else 'Chính thức (Không giới hạn)'}\n\n"
             f"- Cược hôm nay: `{user['total_bet']:,}đ`\n"
@@ -270,8 +273,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("🏦 Chuyển khoản ngân hàng (Khác)", callback_data="nap_nganhang")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        x2_notice = "🎁 **ĐẶC QUYỀN:** Lần nạp đầu tiên của bạn sẽ được **X2 (Nhân đôi)** giá trị tiền nạp!" if not user.get("has_received_x2", False) else ""
         nap_text = (
             "✨ **HỆ THỐNG NẠP TIỀN TỰ ĐỘNG**\n\n"
+            f"{x2_notice}\n\n"
             "✨ Hoặc bấm nút số tiền bên dưới để lấy nhanh thông tin.\n\n"
             "⚠️ **Lưu ý:**\n"
             "✅ Chuyển đúng **SỐ TIỀN** và **NỘI DUNG** được cung cấp.\n"
@@ -321,7 +327,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🚀 **BẢNG XẾP HẠNG ĐUA TOP**\n1. Chưa có dữ liệu tuần này.")
 
     elif text == "🎁 Event":
-        await update.message.reply_text("🎁 Nhận code miễn phí mỗi ngày tại kênh thông báo sự kiện.")
+        await update.message.reply_text("🎁 Nhận code miễn phí mỗi ngày tại kênh thông báo sự kiện. Đặc biệt có chương trình Nạp X2 cho thành viên mới.")
 
     elif text == "🔍 Lệnh":
         help_text = (
@@ -794,15 +800,29 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         info = pending_nap[ma_gd]
         u = get_user(info["user_id"])
         u["is_newbie"] = False
-        u["balance"] += info["amount"]
-        u["history_nap"].append(f"Nạp thành công {info['amount']:,}đ")
+        
+        # --- TÍNH NĂNG KHUYẾN MÃI NẠP X2 LẦN ĐẦU ---
+        thuc_nhan = info["amount"]
+        x2_msg = ""
+        if not u.get("has_received_x2", False):
+            thuc_nhan = info["amount"] * 2
+            u["has_received_x2"] = True
+            x2_msg = f"\n🎁 **Khuyến mãi X2 lần đầu:** Nhân đôi thành `+{thuc_nhan:,}đ`!"
+
+        u["balance"] += thuc_nhan
+        u["history_nap"].append(f"Nạp thành công {info['amount']:,}đ (Thực nhận {thuc_nhan:,}đ)")
         save_data()
         del pending_nap[ma_gd]
+        
         try:
-            await context.bot.send_message(chat_id=info["user_id"], text=f"✅ **NẠP THÀNH CÔNG!**\nCộng `+{info['amount']:,}đ`", parse_mode="Markdown")
+            await context.bot.send_message(
+                chat_id=info["user_id"], 
+                text=f"✅ **NẠP THÀNH CÔNG!**\nCộng `+{thuc_nhan:,}đ`{x2_msg}\n🪙 Số dư mới: `{u['balance']:,}đ`", 
+                parse_mode="Markdown"
+            )
         except Exception:
             pass
-        await update.message.reply_text(f"✅ Đã duyệt mã nạp #{ma_gd} thành công!")
+        await update.message.reply_text(f"✅ Đã duyệt mã nạp #{ma_gd} thành công (Thực nhận: {thuc_nhan:,}đ)!")
 
 async def tuchoi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
