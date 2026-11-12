@@ -56,7 +56,7 @@ pending_nap = {}
 ADMIN_IDS = [8682451039]
 
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
-GROUP_CHAT_ID = -1004222063034 
+GROUP_CHAT_ID = -1004222063034  
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
@@ -141,13 +141,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         choice = parts[0].upper()
         amount_str = parts[1].lower()
         
-        if amount_str == "max":
+        # Nâng cấp: Hỗ trợ cả 'all' và 'max' để tất tay
+        if amount_str in ["max", "all"]:
             bet_amount = user["balance"]
             if user["is_newbie"] and bet_amount > 10000:
                 bet_amount = 10000
         else:
             try:
-                bet_amount = int(amount_str)
+                # Xử lý 10k, 50k, 1m và loại bỏ dấu phân cách
+                cleaned_amount = amount_str.replace(",", "").replace(".", "")
+                if cleaned_amount.endswith("k"):
+                    bet_amount = int(cleaned_amount[:-1]) * 1000
+                elif cleaned_amount.endswith("m"):
+                    bet_amount = int(cleaned_amount[:-1]) * 1000000
+                else:
+                    bet_amount = int(cleaned_amount)
             except ValueError:
                 return
 
@@ -284,7 +292,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text = (
             "📜 **DANH SÁCH LỆNH**\n\n"
             "🎲 **Game Tài Xỉu:**\n"
-            "• `T/X/C/L [tiền]` — Tài/Xỉu/Chẵn/Lẻ\n"
+            "• `T/X/C/L [tiền]` (VD: `T 10k`, `X 50k`, `T all`) — Cược Tài/Xỉu/Chẵn/Lẻ\n"
             "• `/sd` hoặc `/sodu` — Kiểm tra số dư\n\n"
             "💰 **TÀI KHOẢN:**\n"
             "• `/nap [tiền]` — Nạp tiền\n"
@@ -419,7 +427,7 @@ async def run_taixiu_loop(application):
             f"🔥 **Xin mời đặt cược phiên XX**\n"
             f"**#{current_session}** 🔥\n\n"
             f"💲 **Min: 100 | Max mỗi bên: 3.000.000**\n\n"
-            f"🎯 **Cách chơi: [Cửa cược] [số tiền]**\n"
+            f"🎯 **Cách chơi: [Cửa cược] [số tiền]** (VD: `T 10k`, `T all`)\n"
             f"🔵 Tài: T | 🔴 Xỉu: X | ⚪ Chẵn: C | ⚫ Lẻ: L"
         )
         keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/tuanhung88_bot")]]
@@ -766,6 +774,7 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # --- KHỞI CHẠY CHÍNH BẢO VỆ CHỐNG LẶP (LOCK FLAG) ---
 TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
+
 async def main():
     global is_loop_running
     application = ApplicationBuilder().token(TOKEN).build()
