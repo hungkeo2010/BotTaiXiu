@@ -18,15 +18,16 @@ pending_nap = {}
 ADMIN_IDS = [8682451039]
 
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
-GROUP_CHAT_ID =  -1004222063034
+GROUP_CHAT_ID = -1004222063034
 
-#Biến toàn cục quản lý phiên Tài Xỉu
+# Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
-current_session = 199582
-huvang_pool = 287800
+current_session = 199600
+huvang_pool = 288000
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
 history_sessions = [] 
+is_loop_running = False  # Cờ chống lặp tiến trình toàn cục
 
 def get_user(user_id):
     if user_id not in users_db:
@@ -345,180 +346,203 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-# --- VÒNG LẶP PHIÊN TÀI XỈU (ĐỒNG BỘ CHUẨN XÁC, KHÔNG LỆCH PHIÊN) ---
+# --- VÒNG LẶP PHIÊN TÀI XỈU (BẢO VỆ CHỐNG LẶP TIẾN TRÌNH TUYỆT ĐỐI) ---
 async def run_taixiu_loop(application):
     global current_session, session_bets, user_session_bets, huvang_pool, forced_dice_result, history_sessions
     
     while True:
-        try:
-            session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
-            user_session_bets = {}
-            
-            target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
-            
-            start_text = (
-                f"🐸 **TuanHung88 - TUNG XX** 🎲\n"
-                f"🔥 **Xin mời đặt cược phiên XX**\n"
-                f"**#{current_session}** 🔥\n\n"
-                f"💲 **Min: 100 | Max mỗi bên: 3.000.000**\n\n"
-                f"🎯 **Cách chơi: [Cửa cược] [số tiền]**\n"
-                f"🔵 Tài: T | 🔴 Xỉu: X | ⚪ Chẵn: C | ⚫ Lẻ: L"
-            )
-            keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/tuanhung88_bot")]]
-            
-            if target_chat:
+        session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
+        user_session_bets = {}
+        
+        target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
+        
+        start_text = (
+            f"🐸 **TuanHung88 - TUNG XX** 🎲\n"
+            f"🔥 **Xin mời đặt cược phiên XX**\n"
+            f"**#{current_session}** 🔥\n\n"
+            f"💲 **Min: 100 | Max mỗi bên: 3.000.000**\n\n"
+            f"🎯 **Cách chơi: [Cửa cược] [số tiền]**\n"
+            f"🔵 Tài: T | 🔴 Xỉu: X | ⚪ Chẵn: C | ⚫ Lẻ: L"
+        )
+        keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/tuanhung88_bot")]]
+        
+        if target_chat:
+            try:
                 await application.bot.send_message(chat_id=target_chat, text=start_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard_start))
-            
-            # Đếm ngược thời gian chuẩn xác từng mốc
-            await asyncio.sleep(20)
-            if target_chat:
+            except Exception:
+                pass
+        
+        # Đếm ngược tuần tự chống lệch
+        await asyncio.sleep(20)
+        if target_chat:
+            try:
                 await application.bot.send_message(chat_id=target_chat, text=f"🐸 **Còn 40 giây phiên #{current_session}**\n🔵 **TÀI**: {session_bets['T']:,}\n🔴 **XỈU**: {session_bets['X']:,}", parse_mode="Markdown")
-            await asyncio.sleep(20)
-            if target_chat:
+            except Exception:
+                pass
+        await asyncio.sleep(20)
+        if target_chat:
+            try:
                 await application.bot.send_message(chat_id=target_chat, text=f"🐸 **Còn 20 giây phiên #{current_session}**\n🔵 **TÀI**: {session_bets['T']:,}\n🔴 **XỈU**: {session_bets['X']:,}", parse_mode="Markdown")
-            await asyncio.sleep(10)
-            if target_chat:
+            except Exception:
+                pass
+        await asyncio.sleep(10)
+        if target_chat:
+            try:
                 await application.bot.send_message(chat_id=target_chat, text=f"🐸 **Còn 10 giây phiên #{current_session}**", parse_mode="Markdown")
-            await asyncio.sleep(10)
-            
-            if target_chat:
+            except Exception:
+                pass
+        await asyncio.sleep(10)
+        
+        if target_chat:
+            try:
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Hết thời gian đặt cược phiên #{current_session}**", parse_mode="Markdown")
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Bắt đầu tung XX phiên #{current_session}**", parse_mode="Markdown")
-            
-            # --- XỬ LÝ ÉP HOẶC TUNG XÚC XẮC ---
-            dice_values = []
-            if forced_dice_result == "TAI":
-                dice_values = [5, 5, 3]  # Tổng 13 (Tài)
-                forced_dice_result = None
-                if target_chat:
-                    for _ in range(3):
+            except Exception:
+                pass
+        
+        # --- XỬ LÝ XÚC XẮC ---
+        dice_values = []
+        if forced_dice_result == "TAI":
+            dice_values = [5, 5, 3]
+            forced_dice_result = None
+            if target_chat:
+                for _ in range(3):
+                    try:
                         await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                        await asyncio.sleep(1.0)
-            elif forced_dice_result == "XIU":
-                dice_values = [1, 2, 3]  # Tổng 6 (Xỉu)
-                forced_dice_result = None
-                if target_chat:
-                    for _ in range(3):
+                        await asyncio.sleep(0.8)
+                    except Exception:
+                        pass
+        elif forced_dice_result == "XIU":
+            dice_values = [1, 2, 3]
+            forced_dice_result = None
+            if target_chat:
+                for _ in range(3):
+                    try:
                         await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                        await asyncio.sleep(1.0)
-            else:
-                if target_chat:
-                    for _ in range(3):
+                        await asyncio.sleep(0.8)
+                    except Exception:
+                        pass
+        else:
+            if target_chat:
+                for _ in range(3):
+                    try:
                         msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
                         dice_values.append(msg_d.dice.value)
-                        await asyncio.sleep(1.0)
+                        await asyncio.sleep(0.8)
+                    except Exception:
+                        dice_values.append(random.randint(1, 6))
+            else:
+                dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
+        
+        dices = tuple(dice_values)
+        tong = sum(dices)
+        
+        ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
+        ket_qua_cl = "CHẮN" if tong % 2 == 0 else "LẺ"
+        
+        icon_tx = "🔵" if ket_qua_tx == "TÀI" else "🔴"
+        icon_cl = "⚪" if ket_qua_cl == "CHẮN" else "⚫"
+        
+        history_sessions.append((icon_tx, icon_cl))
+        if len(history_sessions) > 12:
+            history_sessions.pop(0)
+            
+        history_str = "".join([f"{tx}{cl}" for tx, cl in history_sessions])
+        
+        tong_thang = 0
+        tong_thua = 0
+        
+        for u_id, bets in user_session_bets.items():
+            u = get_user(u_id)
+            thang_user = 0
+            thua_user = 0
+            
+            if bets["T"] > 0:
+                if ket_qua_tx == "TÀI":
+                    thuong = int(bets["T"] * 1.95)
+                    thang_user += thuong
+                    u["balance"] += thuong
+                    try:
+                        await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược TÀI - {bets['T']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
+                    except Exception:
+                        pass
                 else:
-                    dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
-            
-            dices = tuple(dice_values)
-            tong = sum(dices)
-            
-            ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
-            ket_qua_cl = "CHẮN" if tong % 2 == 0 else "LẺ"
-            
-            icon_tx = "🔵" if ket_qua_tx == "TÀI" else "🔴"
-            icon_cl = "⚪" if ket_qua_cl == "CHẮN" else "⚫"
-            
-            history_sessions.append((icon_tx, icon_cl))
-            if len(history_sessions) > 12:
-                history_sessions.pop(0)
+                    thua_user += bets["T"]
+                    try:
+                        await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược TÀI - {bets['T']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
+                    except Exception:
+                        pass
+
+            if bets["X"] > 0:
+                if ket_qua_tx == "XỈU":
+                    thuong = int(bets["X"] * 1.95)
+                    thang_user += thuong
+                    u["balance"] += thuong
+                    try:
+                        await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược XỈU - {bets['X']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
+                    except Exception:
+                        pass
+                else:
+                    thua_user += bets["X"]
+                    try:
+                        await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược XỈU - {bets['X']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
+                    except Exception:
+                        pass
+
+            if bets["C"] > 0:
+                if ket_qua_cl == "CHẮN":
+                    thuong = int(bets["C"] * 1.95)
+                    thang_user += thuong
+                    u["balance"] += thuong
+                    try:
+                        await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược CHẮN - {bets['C']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
+                    except Exception:
+                        pass
+                else:
+                    thua_user += bets["C"]
+                    try:
+                        await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược CHẮN - {bets['C']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
+                    except Exception:
+                        pass
+
+            if bets["L"] > 0:
+                if ket_qua_cl == "LẺ":
+                    thuong = int(bets["L"] * 1.95)
+                    thang_user += thuong
+                    u["balance"] += thuong
+                    try:
+                        await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược LẺ - {bets['L']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
+                    except Exception:
+                        pass
+                else:
+                    thua_user += bets["L"]
+                    try:
+                        await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược LẺ - {bets['L']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
+                    except Exception:
+                        pass
                 
-            history_str = "".join([f"{tx}{cl}" for tx, cl in history_sessions])
-            
-            tong_thang = 0
-            tong_thua = 0
-            
-            # QUYẾT TOÁN CƯỢC CHO TỪNG USER
-            for u_id, bets in user_session_bets.items():
-                u = get_user(u_id)
-                thang_user = 0
-                thua_user = 0
-                
-                if bets["T"] > 0:
-                    if ket_qua_tx == "TÀI":
-                        thuong = int(bets["T"] * 1.95)
-                        thang_user += thuong
-                        u["balance"] += thuong
-                        try:
-                            await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược TÀI - {bets['T']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
-                        except Exception:
-                            pass
-                    else:
-                        thua_user += bets["T"]
-                        try:
-                            await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược TÀI - {bets['T']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
-                        except Exception:
-                            pass
+            tong_thang += thang_user
+            tong_thua += thua_user
 
-                if bets["X"] > 0:
-                    if ket_qua_tx == "XỈU":
-                        thuong = int(bets["X"] * 1.95)
-                        thang_user += thuong
-                        u["balance"] += thuong
-                        try:
-                            await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược XỈU - {bets['X']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
-                        except Exception:
-                            pass
-                    else:
-                        thua_user += bets["X"]
-                        try:
-                            await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược XỈU - {bets['X']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
-                        except Exception:
-                            pass
-
-                if bets["C"] > 0:
-                    if ket_qua_cl == "CHẮN":
-                        thuong = int(bets["C"] * 1.95)
-                        thang_user += thuong
-                        u["balance"] += thuong
-                        try:
-                            await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược CHẮN - {bets['C']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
-                        except Exception:
-                            pass
-                    else:
-                        thua_user += bets["C"]
-                        try:
-                            await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược CHẮN - {bets['C']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
-                        except Exception:
-                            pass
-
-                if bets["L"] > 0:
-                    if ket_qua_cl == "LẺ":
-                        thuong = int(bets["L"] * 1.95)
-                        thang_user += thuong
-                        u["balance"] += thuong
-                        try:
-                            await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược LẺ - {bets['L']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
-                        except Exception:
-                            pass
-                    else:
-                        thua_user += bets["L"]
-                        try:
-                            await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược LẺ - {bets['L']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
-                        except Exception:
-                            pass
-                    
-                tong_thang += thang_user
-                tong_thua += thua_user
-
-            huvang_pool += random.randint(100, 500)
-            
-            ket_qua_msg = (
-                f"┌─────────────────────────\n"
-                f"│ **{dices[0]} {dices[1]} {dices[2]}** {icon_tx} **{ket_qua_tx} {ket_qua_cl}** {icon_tx} {icon_cl}\n"
-                f"│ 🟠 **Tổng điểm xúc xắc: {tong}**\n"
-                f"│ (3-18)\n"
-                f"│\n"
-                f"│ ｜ **Tổng thắng: {tong_thang:,}**\n"
-                f"│ ｜ **Tổng thua: {tong_thua:,}**\n"
-                f"│ ｜ **Công hũ: +{random.randint(50, 999)}**\n"
-                f"│ ｜ **Hũ hiện tại: {huvang_pool:,}**\n"
-                f"└─────────────────────────\n\n"
-                f"💬 **Thống kê {len(history_sessions)} phiên gần nhất:**\n"
-                f"{history_str}"
-            )
-            
-            if target_chat:
+        huvang_pool += random.randint(100, 500)
+        
+        ket_qua_msg = (
+            f"┌─────────────────────────\n"
+            f"│ **{dices[0]} {dices[1]} {dices[2]}** {icon_tx} **{ket_qua_tx} {ket_qua_cl}** {icon_tx} {icon_cl}\n"
+            f"│ 🟠 **Tổng điểm xúc xắc: {tong}**\n"
+            f"│ (3-18)\n"
+            f"│\n"
+            f"│ ｜ **Tổng thắng: {tong_thang:,}**\n"
+            f"│ ｜ **Tổng thua: {tong_thua:,}**\n"
+            f"│ ｜ **Công hũ: +{random.randint(50, 999)}**\n"
+            f"│ ｜ **Hũ hiện tại: {huvang_pool:,}**\n"
+            f"└─────────────────────────\n\n"
+            f"💬 **Thống kê {len(history_sessions)} phiên gần nhất:**\n"
+            f"{history_str}"
+        )
+        
+        if target_chat:
+            try:
                 keyboard_kq = [
                     [InlineKeyboardButton("💲 Nạp tiền", url="https://t.me/tuanhung88_bot"), InlineKeyboardButton("📜 Lịch sử phiên", url="https://t.me/tuanhung88_bot")]
                 ]
@@ -528,12 +552,10 @@ async def run_taixiu_loop(application):
                     parse_mode="Markdown",
                     reply_markup=InlineKeyboardMarkup(keyboard_kq)
                 )
-            
-            current_session += 1
-            
-        except Exception as e:
-            logging.error(f"Lỗi vòng lặp phiên: {e}")
-            await asyncio.sleep(5)
+            except Exception:
+                pass
+        
+        current_session += 1
 
 # --- QUẢN TRỊ ADMIN ---
 async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -674,10 +696,11 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         forced_dice_result = None
         await update.message.reply_text("🔄 Đã reset xúc xắc ngẫu nhiên.")
 
-# --- KHỞI CHẠY CHÍNH BẰNG ASYNCIO CHUẨN XÁC ---
+# --- KHỞI CHẠY CHÍNH BẢO VỆ CHỐNG LẶP (LOCK FLAG) ---
 TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
 
 async def main():
+    global is_loop_running
     application = ApplicationBuilder().token(TOKEN).build()
     
     application.add_handler(CommandHandler("start", start))
@@ -699,12 +722,13 @@ async def main():
     await application.initialize()
     await application.start()
     
-    # Khởi động vòng lặp game song song
-    asyncio.create_task(run_taixiu_loop(application))
+    # Chỉ cho phép khởi động duy nhất 1 vòng lặp phiên duy nhất
+    if not is_loop_running:
+        is_loop_running = True
+        asyncio.create_task(run_taixiu_loop(application))
     
     await application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
     
-    # Giữ bot chạy liên tục
     stop_signal = asyncio.get_running_loop().create_future()
     await stop_signal
 
