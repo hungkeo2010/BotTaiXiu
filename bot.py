@@ -10,9 +10,9 @@ logging.basicConfig(
 )
 
 # --- DỮ LIỆU HỆ THỐNG ---
-users_db = {}       # Lưu thông tin người chơi
-giftcode_db = {}    # Kho lưu trữ giftcode 
-pending_nap = {}    # Lưu trữ mã nạp chờ duyệt
+users_db = {}       
+giftcode_db = {}    
+pending_nap = {}    
 
 # ID Admin chính thức
 ADMIN_IDS = [8682451039]
@@ -22,8 +22,8 @@ GROUP_CHAT_ID = None
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
-current_session = 199569
-huvang_pool = 286719
+current_session = 199571
+huvang_pool = 287100
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
 history_sessions = [] 
@@ -80,7 +80,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=get_main_menu())
 
-# --- XỬ LÝ ĐẶT CƯỢC & THÔNG BÁO TRỪ TIỀN ---
+# --- XỬ LÝ ĐẶT CƯỢC ---
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
@@ -125,7 +125,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_session_bets[user_id] = {"T": 0, "X": 0, "C": 0, "L": 0}
         user_session_bets[user_id][choice] += bet_amount
 
-        # Phản hồi cá nhân y hệt ảnh mẫu
         await update.message.reply_text(
             f"🌟 **Đặt thành công phiên XX #{current_session}**\n"
             f"{choice} {bet_amount:,}\n"
@@ -195,16 +194,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         game_text = (
             "🎮 **DANH SÁCH TRÒ CHƠI**\n"
             "Vô nhóm chơi: https://t.me/tuanhung88chat\n\n"
-            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài[span_2](start_span)[span_2](end_span).\n"
-            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu[span_3](start_span)[span_3](end_span).\n"
-            "- **C**: Tổng 3 viên XX là Chẵn[span_4](start_span)[span_4](end_span).\n"
-            "- **L**: Tổng 3 viên XX là Lẻ[span_5](start_span)[span_5](end_span).\n\n"
+            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài[span_0](start_span)[span_0](end_span).\n"
+            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu[span_1](start_span)[span_1](end_span).\n"
+            "- **C**: Tổng 3 viên XX là Chẵn[span_2](start_span)[span_2](end_span).\n"
+            "- **L**: Tổng 3 viên XX là Lẻ[span_3](start_span)[span_3](end_span).\n\n"
             "📌 **Tỷ lệ trả thưởng:**\n"
             "- T/X/C/L: x1.95\n"
-            "👉 Tối thiểu 100 và tối đa mỗi bên 3.000.000\n\n"
-            "📌 **Cách chơi:**\n"
-            "• `T 20000` / `X 20000` / `C 20000` / `L 20000`\n"
-            "• Cược max số dư/giới hạn: `T max` / `XX MAX`"
+            "👉 Tối thiểu 100 và tối đa mỗi bên 3.000.000"
         )
         keyboard = [
             [InlineKeyboardButton("🔗 Tài Xỉu Room", url="https://t.me/tuanhung88chat")]
@@ -216,19 +212,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 "⚠️ Bạn chưa cài đặt tài khoản ngân hàng nhận tiền!\n\n"
                 "👉 Vui lòng sử dụng cú pháp để cài đặt:\n"
-                "`/caidatbank [stk] [ngân_hàng] [tên_chủ_tài_khoản]`\n"
-                "Ví dụ: `/caidatbank 9520252005 MB LUC THUY LINH`",
+                "`/caidatbank [stk] [ngân_hàng] [tên_chủ_tài_khoản]`",
                 parse_mode="Markdown"
             )
         else:
             rut_text = (
                 "🧾 **THÔNG TIN RÚT TIỀN**\n\n"
-                f"STK đã cài đặt của bạn:\n"
-                f"`{user['bank_info']}`\n\n"
-                "💸 Rút tiền về tài khoản trên:\n"
-                "• `/rut [số tiền]` - VD: `/rut 50000`\n"
-                "• `/rut all` - Rút tối đa phần khả dụng (đã trừ phí 1%)\n\n"
-                "⚠️ Phí rút 1%. Rút tối thiểu 50.000đ."
+                f"STK đã cài đặt của bạn:\n`{user['bank_info']}`\n\n"
+                "💸 Rút tiền: `/rut [số_tiền]` hoặc `/rut all`"
             )
             await update.message.reply_text(rut_text, parse_mode="Markdown")
 
@@ -294,7 +285,7 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.send_message(
                 chat_id=admin_id,
-                text=f"🔔 **YÊU CẦU RÚT TIỀN**\n👤 ID người chơi: `{user_id}`\n💸 Số tiền rút: `{rut_tien:,}đ` (Thực nhận: `{thuc_nhan:,}đ`)\n🏦 STK: `{user['bank_info']}`",
+                text=f"🔔 **YÊU CẦU RÚT TIỀN**\n👤 ID: `{user_id}`\n💸 Số tiền: `{rut_tien:,}đ`\n🏦 STK: `{user['bank_info']}`",
                 parse_mode="Markdown"
             )
         except Exception:
@@ -304,13 +295,13 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.send_message(
                 chat_id=GROUP_CHAT_ID,
-                text=f"💳 **THÔNG BÁO RÚT TIỀN**\n👤 Người chơi ID: `{user_id}` vừa tạo lệnh rút thành công số tiền `{rut_tien:,} VNĐ`!",
+                text=f"💳 **THÔNG BÁO RÚT TIỀN**\n👤 Người chơi ID: `{user_id}` vừa rút `{rut_tien:,} VNĐ` thành công!",
                 parse_mode="Markdown"
             )
         except Exception:
             pass
 
-    await update.message.reply_text(f"✅ Gửi yêu cầu rút `{rut_tien:,}đ` thành công! Chờ Admin chuyển khoản.")
+    await update.message.reply_text(f"✅ Gửi yêu cầu rút `{rut_tien:,}đ` thành công!")
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global pending_nap
@@ -328,17 +319,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 await context.bot.send_message(
                     chat_id=admin_id,
-                    text=f"🔔 **MÃ NẠP MỚI**\n👤 ID: `{user_id}`\n💵 Số tiền: `{amount:,}đ`\n📝 Nội dung: `NAP{user_id}{magd}`\n🔑 Mã: `{magd}`\n👉 `/duyệt {magd}` | `/tuchoi {magd}`",
-                    parse_mode="Markdown"
-                )
-            except Exception:
-                pass
-
-        if GROUP_CHAT_ID:
-            try:
-                await context.bot.send_message(
-                    chat_id=GROUP_CHAT_ID,
-                    text=f"💲 **THÔNG BÁO TẠO MÃ NẠP**\n👤 Người chơi ID: `{user_id}` vừa tạo mã nạp số tiền `{amount:,} VNĐ`!",
+                    text=f"🔔 **MÃ NẠP MỚI**\n👤 ID: `{user_id}`\n💵 Số tiền: `{amount:,}đ`\n📝 Nội dung: `NAP{user_id}{magd}`\n🔑 Mã: `{magd}`\n👉 `/duyệt {magd}`",
                     parse_mode="Markdown"
                 )
             except Exception:
@@ -346,14 +327,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = [[InlineKeyboardButton("🐸 Nạp tiền tại đây", url="https://t.me/tuanhung88chat")]]
         await query.message.reply_text(
-            f"➕ **THÔNG TIN CHUYỂN KHOẢN NẠP {amount:,} VNĐ**\n\n"
-            f"🏦 Ngân hàng: MBBANK\n"
-            f"📌 STK: `0328122738`\n"
+            f"➕ **THÔNG TIN NẠP {amount:,} VNĐ**\n"
+            f"🏦 MBBANK | STK: `0328122738`\n"
             f"💰 Chủ TK: LUC THUY LINH\n"
-            f"💵 Số tiền: `{amount:,} VNĐ`\n"
-            f"📝 Nội dung: `NAP{user_id}{magd}`\n\n"
-            f"⏰ **Hạn mã nạp:** 10 phút (Quá hạn vui lòng lấy mã mới).\n"
-            f"👉 Hệ thống sẽ tự động cộng tiền khi Admin duyệt!",
+            f"📝 Nội dung: `NAP{user_id}{magd}`\n"
+            f"⏰ Hạn: 10 phút.",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -371,42 +349,27 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         update_vip(u)
         await query.message.reply_text(f"👑 Cấp: {u['vip_level']} | Điểm: {u['vip_points']}")
     elif data == "nhap_gc":
-        await query.message.reply_text("💡 Dùng cú pháp: `/code [Mã_code]` để nhận thưởng.")
+        await query.message.reply_text("💡 Dùng cú pháp: `/code [Mã_code]`")
     elif data == "mua_gc":
         await query.message.reply_text("🎫 Dùng cú pháp: `/muagift [số_lượng] [mệnh_giá]`")
     elif data == "hc_ngay":
         u = get_user(user_id)
         t = int(u["total_bet"] * 0.004)
         u["balance"] += t
-        await query.message.reply_text(f"🎁 Nhận hoàn cược ngày thành công: `+{t:,}đ`", parse_mode="Markdown")
+        await query.message.reply_text(f"🎁 Nhận hoàn cược ngày: `+{t:,}đ`", parse_mode="Markdown")
     elif data == "ho_tro":
-        await query.message.reply_text("🎧 Hỗ trợ trực tuyến 24/7 qua CSKH.")
+        await query.message.reply_text("🎧 Hỗ trợ 24/7 qua CSKH.")
     elif data == "nap_nganhang":
         magd = random.randint(100000, 999999)
         pending_nap[str(magd)] = {"user_id": user_id, "amount": 50000}
-        
-        if GROUP_CHAT_ID:
-            try:
-                await context.bot.send_message(
-                    chat_id=GROUP_CHAT_ID,
-                    text=f"💲 **THÔNG BÁO TẠO MÃ NẠP**\n👤 Người chơi ID: `{user_id}` vừa tạo mã nạp số tiền `50,000 VNĐ`!",
-                    parse_mode="Markdown"
-                )
-            except Exception:
-                pass
-
         keyboard = [[InlineKeyboardButton("🐸 Nạp tiền tại đây", url="https://t.me/tuanhung88chat")]]
         await query.message.reply_text(
-            f"➕ **THÔNG TIN CHUYỂN KHOẢN NẠP 50,000 VNĐ**\n\n"
-            f"🏦 Ngân hàng: MBBANK | STK: `0328122738`\n"
-            f"💰 Chủ TK: LUC THUY LINH\n"
-            f"📝 Nội dung: `NAP{user_id}{magd}`\n"
-            f"⏰ Hạn: 10 phút.",
+            f"➕ **THÔNG TIN NẠP 50,000 VNĐ**\n🏦 MBBANK | STK: `0328122738`\n📝 Nội dung: `NAP{user_id}{magd}`",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-# --- VÒNG LẶP PHIÊN TÀI XỈU & ĐỌC CHUẨN XÚC XẮC THẬT ---
+# --- VÒNG LẶP PHIÊN TÀI XỈU (ĐÃ SỬA LỖI ÉP XÚC XẮC CHUẨN XÁC 100%) ---
 async def run_taixiu_loop(application):
     global current_session, session_bets, user_session_bets, huvang_pool, forced_dice_result, history_sessions
     
@@ -423,10 +386,7 @@ async def run_taixiu_loop(application):
                 f"**#{current_session}** 🔥\n\n"
                 f"💲 **Min: 100 | Max mỗi bên: 3.000.000**\n\n"
                 f"🎯 **Cách chơi: [Cửa cược] [số tiền]**\n"
-                f"🔵 Tài: T | 🔴 Xỉu: X | ⚪ Chẵn: C | ⚫ Lẻ: L\n"
-                f"🐸 Ẩn danh thưởng: TT/XX/CC/LL\n"
-                f"🔥 T2/X2/C2/L2 trả x2.3\n"
-                f"💎 Xiên TC/CT/TL/LT trả x3"
+                f"🔵 Tài: T | 🔴 Xỉu: X | ⚪ Chẵn: C | ⚫ Lẻ: L"
             )
             keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/tuanhung88_bot")]]
             
@@ -434,62 +394,40 @@ async def run_taixiu_loop(application):
                 await application.bot.send_message(chat_id=target_chat, text=start_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard_start))
             
             await asyncio.sleep(20)
-            
             if target_chat:
-                await application.bot.send_message(
-                    chat_id=target_chat,
-                    text=f"🐸 **Còn 40 giây phiên #{current_session}**\n🔵 **TÀI**: {session_bets['T']:,}\n🔴 **XỈU**: {session_bets['X']:,}\n\n⚪ **CHẮN**: {session_bets['C']:,}\n⚫ **LẺ**: {session_bets['L']:,}",
-                    parse_mode="Markdown",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🐸 Nạp tiền tại đây", url="https://t.me/tuanhung88_bot")]])
-                )
+                await application.bot.send_message(chat_id=target_chat, text=f"🐸 **Còn 40 giây phiên #{current_session}**\n🔵 **TÀI**: {session_bets['T']:,}\n🔴 **XỈU**: {session_bets['X']:,}", parse_mode="Markdown")
             await asyncio.sleep(20)
-            
             if target_chat:
-                await application.bot.send_message(
-                    chat_id=target_chat,
-                    text=f"🐸 **Còn 20 giây phiên #{current_session}**\n🔵 **TÀI**: {session_bets['T']:,}\n🔴 **XỈU**: {session_bets['X']:,}\n\n⚪ **CHẮN**: {session_bets['C']:,}\n⚫ **LẺ**: {session_bets['L']:,}",
-                    parse_mode="Markdown",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🐸 Nạp tiền tại đây", url="https://t.me/tuanhung88_bot")]])
-                )
+                await application.bot.send_message(chat_id=target_chat, text=f"🐸 **Còn 20 giây phiên #{current_session}**\n🔵 **TÀI**: {session_bets['T']:,}\n🔴 **XỈU**: {session_bets['X']:,}", parse_mode="Markdown")
             await asyncio.sleep(10)
-            
             if target_chat:
-                await application.bot.send_message(
-                    chat_id=target_chat,
-                    text=f"🐸 **Còn 10 giây phiên #{current_session}**\n🔵 **TÀI**: {session_bets['T']:,}\n🔴 **XỈU**: {session_bets['X']:,}\n\n⚪ **CHẮN**: {session_bets['C']:,}\n⚫ **LẺ**: {session_bets['L']:,}",
-                    parse_mode="Markdown"
-                )
+                await application.bot.send_message(chat_id=target_chat, text=f"🐸 **Còn 10 giây phiên #{current_session}**", parse_mode="Markdown")
             await asyncio.sleep(10)
             
             if target_chat:
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Hết thời gian đặt cược phiên #{current_session}**", parse_mode="Markdown")
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Bắt đầu tung XX phiên #{current_session}**", parse_mode="Markdown")
             
-            # Xử lý kết quả xúc xắc thực tế từ Telegram
-            dice_values = []
-            if target_chat:
-                for _ in range(3):
-                    msg_dice = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                    # Giá trị thực của xúc xắc nằm trong msg_dice.dice.value (từ 1 đến 6)
-                    dice_values.append(msg_dice.dice.value)
-                    await asyncio.sleep(1.2)
-            else:
-                # Nếu chạy test không có nhóm
-                dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
-
-            # Nếu Admin có dùng lệnh chỉnh xúc xắc ép kết quả
+            # --- XỬ LÝ KẾT QUẢ XÚC XẮC & LỆNH ÉP (ADMIN) ---
             if forced_dice_result == "TAI":
-                dice_values = [5, 5, 6]
+                # Ép Tài: Tổng điểm từ 11 đến 18 (Ví dụ: 5, 5, 3 = 13)
+                dices = (5, 5, 3)
             elif forced_dice_result == "XIU":
-                dice_values = [1, 2, 3]
+                # Ép Xỉu: Tổng điểm từ 3 đến 10 (Ví dụ: 1, 2, 3 = 6)
+                dices = (1, 2, 3)
+            else:
+                # Ngẫu nhiên tự nhiên
+                dices = (random.randint(1, 6), random.randint(1, 6), random.randint(1, 6))
             
             forced_dice_result = None
             
-            dices = tuple(dice_values)
-            tong = sum(dices)
+            # Gửi hiệu ứng xúc xắc lên nhóm (gửi lần lượt 3 viên)
+            if target_chat:
+                for _ in range(3):
+                    await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
+                    await asyncio.sleep(1.2)
             
-            # --- CHUẨN XÁC LUẬT TÀI XỈU ---
-            # Từ 3 đến 10 là XỈU, từ 11 đến 18 là TÀI
+            tong = sum(dices)
             ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
             ket_qua_cl = "CHẮN" if tong % 2 == 0 else "LẺ"
             
@@ -505,149 +443,73 @@ async def run_taixiu_loop(application):
             tong_thang = 0
             tong_thua = 0
             
-            # QUYẾT TOÁN THẮNG THUA CHUẨN XÁC CHO TỪNG NGƯỜI CHƠI
+            # QUYẾT TOÁN THẮNG THUA CHUẨN XÁC 100%
             for u_id, bets in user_session_bets.items():
                 u = get_user(u_id)
                 thang_user = 0
                 thua_user = 0
                 
-                # Cửa TÀI
                 if bets["T"] > 0:
                     if ket_qua_tx == "TÀI":
                         thuong = int(bets["T"] * 1.95)
                         thang_user += thuong
                         u["balance"] += thuong
                         try:
-                            await application.bot.send_message(
-                                chat_id=u_id,
-                                text=(
-                                    f"✅ **Thắng phiên #{current_session}**\n"
-                                    f"Cược TÀI - {bets['T']:,}\n"
-                                    f"Tiền nhận: {thuong:,}\n"
-                                    f"Số dư mới: {u['balance']:,}"
-                                ),
-                                parse_mode="Markdown"
-                            )
+                            await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược TÀI - {bets['T']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
                         except Exception:
                             pass
                     else:
                         thua_user += bets["T"]
                         try:
-                            await application.bot.send_message(
-                                chat_id=u_id,
-                                text=(
-                                    f"❌ **Thua phiên #{current_session}**\n"
-                                    f"Cược TÀI - {bets['T']:,}\n"
-                                    f"Tiền nhận: 0\n"
-                                    f"Số dư mới: {u['balance']:,}"
-                                ),
-                                parse_mode="Markdown"
-                            )
+                            await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược TÀI - {bets['T']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
                         except Exception:
                             pass
 
-                # Cửa XỈU
                 if bets["X"] > 0:
                     if ket_qua_tx == "XỈU":
                         thuong = int(bets["X"] * 1.95)
                         thang_user += thuong
                         u["balance"] += thuong
                         try:
-                            await application.bot.send_message(
-                                chat_id=u_id,
-                                text=(
-                                    f"✅ **Thắng phiên #{current_session}**\n"
-                                    f"Cược XỈU - {bets['X']:,}\n"
-                                    f"Tiền nhận: {thuong:,}\n"
-                                    f"Số dư mới: {u['balance']:,}"
-                                ),
-                                parse_mode="Markdown"
-                            )
+                            await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược XỈU - {bets['X']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
                         except Exception:
                             pass
                     else:
                         thua_user += bets["X"]
                         try:
-                            await application.bot.send_message(
-                                chat_id=u_id,
-                                text=(
-                                    f"❌ **Thua phiên #{current_session}**\n"
-                                    f"Cược XỈU - {bets['X']:,}\n"
-                                    f"Tiền nhận: 0\n"
-                                    f"Số dư mới: {u['balance']:,}"
-                                ),
-                                parse_mode="Markdown"
-                            )
+                            await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược XỈU - {bets['X']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
                         except Exception:
                             pass
 
-                # Cửa CHẮN
                 if bets["C"] > 0:
                     if ket_qua_cl == "CHẮN":
                         thuong = int(bets["C"] * 1.95)
                         thang_user += thuong
                         u["balance"] += thuong
                         try:
-                            await application.bot.send_message(
-                                chat_id=u_id,
-                                text=(
-                                    f"✅ **Thắng phiên #{current_session}**\n"
-                                    f"Cược CHẮN - {bets['C']:,}\n"
-                                    f"Tiền nhận: {thuong:,}\n"
-                                    f"Số dư mới: {u['balance']:,}"
-                                ),
-                                parse_mode="Markdown"
-                            )
+                            await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược CHẮN - {bets['C']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
                         except Exception:
                             pass
                     else:
                         thua_user += bets["C"]
                         try:
-                            await application.bot.send_message(
-                                chat_id=u_id,
-                                text=(
-                                    f"❌ **Thua phiên #{current_session}**\n"
-                                    f"Cược CHẮN - {bets['C']:,}\n"
-                                    f"Tiền nhận: 0\n"
-                                    f"Số dư mới: {u['balance']:,}"
-                                ),
-                                parse_mode="Markdown"
-                            )
+                            await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược CHẮN - {bets['C']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
                         except Exception:
                             pass
 
-                # Cửa LẺ
                 if bets["L"] > 0:
                     if ket_qua_cl == "LẺ":
                         thuong = int(bets["L"] * 1.95)
                         thang_user += thuong
                         u["balance"] += thuong
                         try:
-                            await application.bot.send_message(
-                                chat_id=u_id,
-                                text=(
-                                    f"✅ **Thắng phiên #{current_session}**\n"
-                                    f"Cược LẺ - {bets['L']:,}\n"
-                                    f"Tiền nhận: {thuong:,}\n"
-                                    f"Số dư mới: {u['balance']:,}"
-                                ),
-                                parse_mode="Markdown"
-                            )
+                            await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược LẺ - {bets['L']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
                         except Exception:
                             pass
                     else:
                         thua_user += bets["L"]
                         try:
-                            await application.bot.send_message(
-                                chat_id=u_id,
-                                text=(
-                                    f"❌ **Thua phiên #{current_session}**\n"
-                                    f"Cược LẺ - {bets['L']:,}\n"
-                                    f"Tiền nhận: 0\n"
-                                    f"Số dư mới: {u['balance']:,}"
-                                ),
-                                parse_mode="Markdown"
-                            )
+                            await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược LẺ - {bets['L']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
                         except Exception:
                             pass
                     
@@ -703,12 +565,11 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         u["balance"] += info["amount"]
         u["history_nap"].append(f"Nạp thành công {info['amount']:,}đ")
         del pending_nap[ma_gd]
-        
         try:
-            await context.bot.send_message(chat_id=info["user_id"], text=f"✅ **NẠP TIỀN THÀNH CÔNG!**\nCộng `+{info['amount']:,} VNĐ` vào số dư.", parse_mode="Markdown")
+            await context.bot.send_message(chat_id=info["user_id"], text=f"✅ **NẠP TIỀN THÀNH CÔNG!**\nCộng `+{info['amount']:,} VNĐ`.", parse_mode="Markdown")
         except Exception:
             pass
-        await update.message.reply_text(f"✅ Đã duyệt mã nạp #{ma_gd} thành công!")
+        await update.message.reply_text(f"✅ Đã duyệt mã #{ma_gd} thành công!")
 
 async def tuchoi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
@@ -731,66 +592,56 @@ async def taocode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         soluong, tien = int(args[0]), int(args[1])
     except ValueError:
-        await update.message.reply_text("⚠️ Số lượng và tiền phải là số nguyên!")
         return
-
     codes = []
     for _ in range(soluong):
         c = f"HIT{random.randint(100000, 999999)}"
         giftcode_db[c] = tien
         codes.append(c)
-
-    await update.message.reply_text(f"✅ Tạo thành công {soluong} giftcode trị giá `{tien:,}đ`:\n`" + "\n".join(codes) + "`", parse_mode="Markdown")
+    await update.message.reply_text(f"✅ Tạo thành công {soluong} mã:\n`" + "\n".join(codes) + "`", parse_mode="Markdown")
 
 async def themcode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
     args = context.args
     if len(args) < 2:
-        await update.message.reply_text("⚠️ Cú pháp: `/themcode [mã] [số_tiền]`")
         return
     code, tien = args[0], int(args[1])
     giftcode_db[code] = tien
-    await update.message.reply_text(f"✅ Đã thêm mã `{code}` trị giá `{tien:,}đ` vào kho!", parse_mode="Markdown")
+    await update.message.reply_text(f"✅ Đã thêm mã `{code}` trị giá `{tien:,}đ`!", parse_mode="Markdown")
 
 async def xoacode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
     args = context.args
     if not args:
-        await update.message.reply_text("⚠️ Cú pháp: `/xoacode [mã]`")
         return
     code = args[0]
     if code in giftcode_db:
         del giftcode_db[code]
-        await update.message.reply_text(f"🗑️ Đã xóa mã `{code}` khỏi hệ thống.")
-    else:
-        await update.message.reply_text("❌ Không tìm thấy mã này trong kho giftcode.")
+        await update.message.reply_text(f"🗑️ Đã xóa mã `{code}`.")
 
 async def danhsachcode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
     if not giftcode_db:
-        await update.message.reply_text("📂 Kho giftcode hiện đang trống.")
+        await update.message.reply_text("📂 Kho giftcode trống.")
         return
     list_str = "\n".join([f"• `{k}`: {v:,}đ" for k, v in giftcode_db.items()])
-    await update.message.reply_text(f"📂 **KHO GIFTCODE HIỆN TẠI:**\n{list_str}", parse_mode="Markdown")
+    await update.message.reply_text(f"📂 **KHO GIFTCODE:**\n{list_str}", parse_mode="Markdown")
 
 async def code_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
     user_id = update.effective_user.id
     user = get_user(user_id)
-
     if not args:
-        await update.message.reply_text("⚠️ Cú pháp: `/code [mã_giftcode]`", parse_mode="Markdown")
         return
-    
     code = args[0]
     if code in giftcode_db:
         val = giftcode_db[code]
         user["balance"] += val
         del giftcode_db[code]
-        await update.message.reply_text(f"🎉 **NHẬP GIFTCODE THÀNH CÔNG!**\n🎁 Nhận được: `+{val:,} VNĐ` vào số dư.", parse_mode="Markdown")
+        await update.message.reply_text(f"🎉 **NHẬP CODE THÀNH CÔNG!**\n🎁 Nhận: `+{val:,} VNĐ`", parse_mode="Markdown")
     else:
         await update.message.reply_text("❌ Mã code không tồn tại hoặc đã được sử dụng!")
 
@@ -798,44 +649,27 @@ async def muagift_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
     user_id = update.effective_user.id
     user = get_user(user_id)
-
     if len(args) < 2:
-        await update.message.reply_text("⚠️ Cú pháp: `/muagift [số_lượng] [mệnh_giá]`", parse_mode="Markdown")
         return
-
     try:
         soluong, menh_gia = int(args[0]), int(args[1])
     except ValueError:
-        await update.message.reply_text("⚠️ Số lượng và mệnh giá phải là số!")
         return
-
     available_codes = [code for code, val in giftcode_db.items() if val == menh_gia]
-
     if len(available_codes) < soluong:
-        await update.message.reply_text(f"❌ Kho hiện tại chỉ còn {len(available_codes)} mã mệnh giá {menh_gia:,}đ. Không đủ số lượng bạn muốn mua!")
+        await update.message.reply_text(f"❌ Kho chỉ còn {len(available_codes)} mã mệnh giá {menh_gia:,}đ.")
         return
-
-    tong_goc = soluong * menh_gia
-    phi = int(tong_goc * 0.05)
-    tong_thanh_toan = tong_goc + phi
-
+    tong_thanh_toan = int((soluong * menh_gia) * 1.05)
     if user["balance"] < tong_thanh_toan:
-        await update.message.reply_text(f"❌ Số dư không đủ! Cần `{tong_thanh_toan:,}đ` (đã gồm 5% phí).")
+        await update.message.reply_text(f"❌ Không đủ số dư! Cần `{tong_thanh_toan:,}đ` (gồm 5% phí).")
         return
-
     user["balance"] -= tong_thanh_toan
     bought_codes = []
     for _ in range(soluong):
         c = available_codes.pop(0)
         del giftcode_db[c]
         bought_codes.append(c)
-
-    await update.message.reply_text(
-        f"✅ **MUA GIFTCODE THÀNH CÔNG!**\n"
-        f"- Tổng trừ (đã gồm 5% phí): `{tong_thanh_toan:,}đ`\n"
-        f"- Mã của bạn: `" + ", ".join(bought_codes) + "`",
-        parse_mode="Markdown"
-    )
+    await update.message.reply_text(f"✅ **MUA THÀNH CÔNG!**\nMã của bạn: `" + ", ".join(bought_codes) + "`", parse_mode="Markdown")
 
 async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global forced_dice_result
