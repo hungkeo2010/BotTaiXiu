@@ -17,8 +17,11 @@ giftcode_db = {}    # Kho lưu trữ giftcode
 # ID Admin chính thức
 ADMIN_IDS = [8682451039]
 
-# Biến toàn cục quản lý can thiệp xúc xắc 100% chính xác trong phiên
+# Biến toàn cục quản lý phiên Tài Xỉu và can thiệp xúc xắc 100% chính xác
 forced_dice_result = None
+current_session = 197892
+session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
+user_session_bets = {}  # {user_id: {"T": x, "X": y, ...}}
 
 def get_user(user_id):
     if user_id not in users_db:
@@ -74,12 +77,62 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=get_main_menu())
 
-# --- XỬ LÝ NHẮN TIN MENU CHÍNH ---
+# --- XỬ LÝ NHẮN TIN & ĐẶT CƯỢC TRÒ CHƠI ---
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
+    if not update.message or not update.message.text:
+        return
+        
+    text = update.message.text.strip()
     user_id = update.effective_user.id
     user = get_user(user_id)
 
+    # Xử lý cược qua tin nhắn chat (Ví dụ: T 20000, X max, C 50000, L max)
+    parts = text.split()
+    if len(parts) == 2 and parts[0].upper() in ["T", "X", "C", "L"]:
+        choice = parts[0].upper()
+        amount_str = parts[1].lower()
+        
+        if amount_str == "max":
+            bet_amount = user["balance"]
+            if user["is_newbie"] and bet_amount > 10000:
+                bet_amount = 10000
+        else:
+            try:
+                bet_amount = int(amount_str)
+            except ValueError:
+                return  # Không phải cú pháp cược hợp lệ thì bỏ qua
+
+        if bet_amount < 100:
+            await update.message.reply_text("❌ Mức cược tối thiểu là `100 VNĐ`!", parse_mode="Markdown")
+            return
+        if bet_amount > 3000000:
+            await update.message.reply_text("❌ Mức cược tối đa mỗi bên là `3.000.000 VNĐ`!", parse_mode="Markdown")
+            return
+        if user["is_newbie"] and bet_amount > 10000:
+            await update.message.reply_text("⚠️ Bạn đang là Tân thủ (Giới hạn cược max 10k). Vui lòng nạp 50k để mở khóa toàn bộ hạn mức!", parse_mode="Markdown")
+            return
+        if user["balance"] < bet_amount:
+            await update.message.reply_text("❌ Số dư tài khoản không đủ để đặt cược số tiền này!", parse_mode="Markdown")
+            return
+
+        # Trừ tiền và ghi nhận cược phiên
+        user["balance"] -= bet_amount
+        user["total_bet"] += bet_amount
+        
+        session_bets[choice] += bet_amount
+        if user_id not in user_session_bets:
+            user_session_bets[user_id] = {"T": 0, "X": 0, "C": 0, "L": 0}
+        user_session_bets[user_id][choice] += bet_amount
+
+        full_name_choice = {"T": "TÀI", "X": "XỈU", "C": "CHẮN", "L": "LẺ"}[choice]
+        await update.message.reply_text(
+            f"✅ **Đặt thành công phiên #{current_session}**\n"
+            f"| **{full_name_choice}**: `{bet_amount:,}đ`",
+            parse_mode="Markdown"
+        )
+        return
+
+    # Xử lý các nút Menu chính
     if text == "📄 Tài khoản":
         update_vip(user)
         keyboard = [
@@ -139,7 +192,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• Cược max số dư/giới hạn: `T max` / `XX MAX`"
         )
         keyboard = [
-            [InlineKeyboardButton("🎲 Chơi Tài Xỉu Siêu Tốc", callback_data="choi_taixiu"), InlineKeyboardButton("🎯 Chẵn Lẻ / Lót Vị", callback_data="choi_chanle")]
+            [InlineKeyboardButton("🔗 Tài Xỉu Room", url="https://t.me/tuanhung88chat")]
         ]
         await update.message.reply_text(game_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -393,44 +446,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data == "choi_taixiu":
-        if forced_dice_result == "TAI":
-            dices = (5, 5, 6)
-        elif forced_dice_result == "XIU":
-            dices = (1, 2, 3)
-        else:
-            dices = (random.randint(1, 6), random.randint(1, 6), random.randint(1, 6))
-
-        tong = sum(dices)
-        ket_qua = "TÀI" if tong >= 11 else "XỈU"
-        
-        has_3_6 = (3 in dices and 6 in dices)
-        has_3_1 = (3 in dices and 1 in dices)
-        
-        bet_amount = 10000
-        no_hu_text = ""
-        if has_3_6 or has_3_1:
-            thuong_no_hu = bet_amount * 5
-            user["balance"] += thuong_no_hu
-            no_hu_text = f"\n\n🎉 **NỔ HŨ CỰC LỚN!** Xúc xắc xuất hiện bộ đặc biệt -> **NHÂN X5 TIỀN THƯỞNG** (+{thuong_no_hu:,}đ)!"
-
-        if user["is_newbie"]:
-            notif = (
-                f"🎲 **KẾT QUẢ TÀI XỈU (Tân thủ)**\n"
-                f"🎲 Xúc xắc: {dices[0]} - {dices[1]} - {dices[2]} (Tổng: {tong} -> **{ket_qua}**)"
-                f"{no_hu_text}\n\n⚠️ Bạn đang là Tân thủ (Max cược 10k). Hãy nạp 50k để mở khóa toàn bộ!"
-            )
-        else:
-            notif = (
-                f"🎲 **KẾT QUẢ TÀI XỈU VIP**\n"
-                f"🎲 Xúc xắc: {dices[0]} - {dices[1]} - {dices[2]} (Tổng: {tong} -> **{ket_qua}**)"
-                f"{no_hu_text}"
-            )
-        
-        user["history_choi"].append(f"Tài Xỉu: {dices} ({ket_qua})")
-        await query.message.reply_text(notif, parse_mode="Markdown")
+        await query.message.reply_text("🎲 Tham gia đặt cược trực tiếp tại nhóm: https://t.me/tuanhung88chat bằng cú pháp: `T [tiền]`, `X [tiền]`, `C [tiền]`, `L [tiền]`", parse_mode="Markdown")
 
     elif data == "choi_chanle":
-        await query.message.reply_text("🎯 **CHẮN LẺ & LÓT VỊ**\nVí dụ: D3 11 2k-5k (Dự đoán vị trí chuẩn xác, trúng x5 tiền thưởng!).")
+        await query.message.reply_text("🎯 Tham gia đặt cược Chẵn Lẻ tại nhóm: https://t.me/tuanhung88chat bằng cú pháp: `C [tiền]` hoặc `L [tiền]`", parse_mode="Markdown")
 
 # --- CÁC LỆNH QUẢN LÝ GIFTCODE & ADMIN ---
 async def taocode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
