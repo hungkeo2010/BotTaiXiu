@@ -3,9 +3,8 @@ import random
 import asyncio
 import json
 import os
-import http.server
-import socketserver
 import threading
+from flask import Flask
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
@@ -14,22 +13,16 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# --- TẠO WEB SERVER GIẢ LẬP ĐỂ RENDER KHÔNG BỊ TIMEOUT (GIÚP CHẠY 24/7) ---
-PORT = int(os.environ.get("PORT", 10000))
+# --- TẠO WEB SERVER BẰNG FLASK ĐỂ UPTIMEROBOT NHẬN DIỆN 200 OK ---
+app = Flask(__name__)
 
-class HealthCheckHandler(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot is alive and running 24/7!")
+@app.route('/')
+def health_check():
+    return "Bot is alive and running 24/7!", 200
 
 def run_web_server():
-    try:
-        with socketserver.TCPServer(("", PORT), HealthCheckHandler) as httpd:
-            logging.info(f"Web server running on port {PORT}")
-            httpd.serve_forever()
-    except Exception as e:
-        logging.error(f"Web server error: {e}")
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
 
 # Chạy web server ở luồng phụ (background thread)
 threading.Thread(target=run_web_server, daemon=True).start()
@@ -63,7 +56,7 @@ pending_nap = {}
 ADMIN_IDS = [8682451039]
 
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
-GROUP_CHAT_ID = -1004222063034  
+GROUP_CHAT_ID = -1004222063034 
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
@@ -773,7 +766,6 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # --- KHỞI CHẠY CHÍNH BẢO VỆ CHỐNG LẶP (LOCK FLAG) ---
 TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
-
 async def main():
     global is_loop_running
     application = ApplicationBuilder().token(TOKEN).build()
