@@ -18,7 +18,7 @@ pending_nap = {}
 ADMIN_IDS = [8682451039]
 
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
-GROUP_CHAT_ID = None  
+GROUP_CHAT_ID = -1004222063034
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
@@ -27,7 +27,6 @@ huvang_pool = 287500
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
 history_sessions = [] 
-loop_started = False  
 
 def get_user(user_id):
     if user_id not in users_db:
@@ -355,7 +354,7 @@ async def run_taixiu_loop(application):
             session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
             user_session_bets = {}
             
-            target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else -1004222063034
+            target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
             
             start_text = (
                 f"🐸 **TuanHung88 - TUNG XX** 🎲\n"
@@ -387,10 +386,8 @@ async def run_taixiu_loop(application):
             
             # --- XỬ LÝ KẾT QUẢ XÚC XẮC & LỆNH ÉP (ADMIN) ---
             if forced_dice_result == "TAI":
-                # Ép Tài: Tổng điểm từ 11 đến 18
                 dices = (5, 5, 3)
             elif forced_dice_result == "XIU":
-                # Ép Xỉu: Tổng điểm từ 3 đến 10
                 dices = (1, 2, 3)
             else:
                 dices = (random.randint(1, 6), random.randint(1, 6), random.randint(1, 6))
@@ -663,17 +660,11 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         forced_dice_result = None
         await update.message.reply_text("🔄 Đã reset xúc xắc ngẫu nhiên.")
 
-# --- KHỞI CHẠY CHÍNH (ĐÃ SỬA LỖI EVENT LOOP) ---
+# --- KHỞI CHẠY CHÍNH BẰNG ASYNCIO CHUẨN XÁC ---
 TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
 
-async def post_init(application):
-    global loop_started
-    if not loop_started:
-        loop_started = True
-        asyncio.create_task(run_taixiu_loop(application))
-
-def main():
-    application = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
+async def main():
+    application = ApplicationBuilder().token(TOKEN).build()
     
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("caidatbank", caidatbank_command))
@@ -691,7 +682,20 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     application.add_handler(CallbackQueryHandler(button_callback))
     
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    await application.initialize()
+    await application.start()
+    
+    # Khởi động vòng lặp game song song
+    asyncio.create_task(run_taixiu_loop(application))
+    
+    await application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+    
+    # Giữ bot chạy liên tục
+    stop_signal = asyncio.get_running_loop().create_future()
+    await stop_signal
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        pass
