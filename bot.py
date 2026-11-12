@@ -28,6 +28,7 @@ def get_user(user_id):
             "vip_points": 0,
             "vip_level": "Đồng 🥉",
             "is_newbie": True,  # Mặc định tài khoản mới là Tân thủ (Max cược 10k, cần nạp 50k mở khóa)
+            "bank_info": None,  # Lưu thông tin ngân hàng cài đặt qua /caidatbank
             "history_nap": [],
             "history_rut": [],
             "history_choi": []
@@ -67,10 +68,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     get_user(user_id)
     text = (
-        f"🤖 **HỆ THỐNG BOT TÀI XỈU VIP 24/7**\n\n"
-        f"🆔 ID của bạn: `{user_id}`\n"
-        f"💡 Trạng thái: **Tân thủ** (Giới hạn cược max 10k. Nạp tối thiểu 50k để thoát Tân thủ và mở khóa toàn bộ hệ thống!)\n\n"
-        f"Vui lòng chọn các tính năng bên dưới menu:"
+        f"🔵 **ID của bạn là `{user_id}`**\n\n"
+        f"🏛️ Tham gia Room TX để săn hũ và nhận giftcode hằng ngày https://t.me/tuanhung88chat\n\n"
+        f"💙 Tham gia kênh thông báo để nhận code hàng ngày 💙"
     )
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=get_main_menu())
 
@@ -104,18 +104,72 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(info_text, parse_mode="Markdown", reply_markup=reply_markup)
 
     elif text == "💲 Nạp Tiền":
-        keyboard = [[InlineKeyboardButton("🏦 Chuyển khoản ngân hàng", callback_data="nap_nganhang")]]
+        keyboard = [
+            [InlineKeyboardButton("20.000đ", callback_data="nap_20000"), InlineKeyboardButton("30.000đ", callback_data="nap_30000"), InlineKeyboardButton("50.000đ", callback_data="nap_50000")],
+            [InlineKeyboardButton("100.000đ", callback_data="nap_100000"), InlineKeyboardButton("200.000đ", callback_data="nap_200000"), InlineKeyboardButton("500.000đ", callback_data="nap_500000")],
+            [InlineKeyboardButton("1.000.000đ", callback_data="nap_1000000"), InlineKeyboardButton("2.000.000đ", callback_data="nap_2000000"), InlineKeyboardButton("5.000.000đ", callback_data="nap_5000000")],
+            [InlineKeyboardButton("10.000.000đ", callback_data="nap_10000000"), InlineKeyboardButton("20.000.000đ", callback_data="nap_20000000"), InlineKeyboardButton("50.000.000đ", callback_data="nap_50000000")],
+            [InlineKeyboardButton("🏦 Chuyển khoản ngân hàng (Khác)", callback_data="nap_nganhang")]
+        ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("💲 **CHỌN PHƯƠNG THỨC NẠP TIỀN**", parse_mode="Markdown", reply_markup=reply_markup)
+        nap_text = (
+            "✨ **HỆ THỐNG NẠP TIỀN TỰ ĐỘNG**\n\n"
+            "✨ Hoặc bấm nút số tiền bên dưới để lấy nhanh thông tin.\n\n"
+            "⚠️ **Lưu ý:**\n"
+            "✅ Chuyển đúng **SỐ TIỀN** và **NỘI DUNG** được cung cấp.\n"
+            "✅ Mỗi lần nạp cần lấy thông tin **MỚI**.\n"
+            "🛑 Không dùng thông tin cũ cho giao dịch sau.\n"
+            "📦 Nạp tối thiểu: **10.000đ**"
+        )
+        await update.message.reply_text(nap_text, parse_mode="Markdown", reply_markup=reply_markup)
 
     elif text == "📁 Danh sách game":
+        game_text = (
+            "🎮 **DANH SÁCH TRÒ CHƠI**\n"
+            "Vô nhóm chơi: https://t.me/tuanhung88chat\n\n"
+            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài.\n"
+            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu.\n"
+            "- **C**: Tổng 3 viên XX là Chẵn.\n"
+            "- **L**: Tổng 3 viên XX là Lẻ.\n\n"
+            "📌 **Tỷ lệ trả thưởng:**\n"
+            "- T/X/C/L: x1.95\n"
+            "👉 Tối thiểu 100 và tối đa mỗi bên 3.000.000\n\n"
+            "📌 **Cách chơi:**\n"
+            "• `T 20000` / `X 20000` / `C 20000` / `L 20000`\n"
+            "• Cược max số dư/giới hạn: `T max` / `XX MAX`"
+        )
         keyboard = [
-            [InlineKeyboardButton("🎲 Tài Xỉu Siêu Tốc (Nổ hũ X5)", callback_data="choi_taixiu"), InlineKeyboardButton("🎯 Chẵn Lẻ / Lót Vị", callback_data="choi_chanle")]
+            [InlineKeyboardButton("🎲 Chơi Tài Xỉu Siêu Tốc", callback_data="choi_taixiu"), InlineKeyboardButton("🎯 Chẵn Lẻ / Lót Vị", callback_data="choi_chanle")]
         ]
-        await update.message.reply_text("🎮 **DANH SÁCH TRÒ CHƠI**\nChọn game bạn muốn tham gia:", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        await update.message.reply_text(game_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif text == "💳 Rút Tiền":
-        await update.message.reply_text("💳 Vui lòng liên hệ CSKH hoặc dùng lệnh rút tiền tự động.")
+        if not user["bank_info"]:
+            await update.message.reply_text(
+                "⚠️ Bạn chưa cài đặt tài khoản ngân hàng nhận tiền!\n\n"
+                "👉 Vui lòng sử dụng cú pháp để cài đặt:\n"
+                "`/caidatbank [stk] [ngân_hàng] [tên_chủ_tài_khoản]`\n"
+                "Ví dụ: `/caidatbank 9520252005 MB LUC THUY LINH`",
+                parse_mode="Markdown"
+            )
+        else:
+            rut_text = (
+                "🧾 **THÔNG TIN RÚT TIỀN**\n\n"
+                f"STK đã cài đặt của bạn:\n"
+                f"`{user['bank_info']}`\n\n"
+                "Để đổi STK vui lòng liên hệ Admin.\n\n"
+                "💸 Rút tiền về tài khoản trên:\n"
+                "• `/rut [số tiền]` - VD: `/rut 50000`\n"
+                "• `/rut all` - Rút tối đa phần khả dụng (đã trừ phí 1%)\n\n"
+                "📋 **Điều kiện rút tiền:**\n"
+                "• Cược đủ mốc tiền nạp + số dư tân thủ giữ lại x3.\n"
+                "• Số tiền đã nạp: `0đ`\n"
+                "• Mốc cược cần đủ: `0đ`\n"
+                "• Hiện đã cược: `0đ`\n\n"
+                "❌ Chưa đủ điều kiện! Vui lòng cược thêm.\n\n"
+                "⚠️ Phí rút 1%. Rút tối thiểu theo cài đặt bot (thường 50k)."
+            )
+            await update.message.reply_text(rut_text, parse_mode="Markdown")
 
     elif text == "🌸 Chuyển Tiền":
         await update.message.reply_text("🌸 Cú pháp chuyển tiền: `/chuyentien [ID_nhận] [Số_tiền]`")
@@ -127,22 +181,128 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🎁 Nhận code miễn phí mỗi ngày tại kênh thông báo sự kiện.")
 
     elif text == "🔍 Lệnh":
-        help_text = (
-            "🔍 **HỆ THỐNG LỆNH HỖ TRỢ**\n\n"
-            "👤 **Thành viên:**\n"
-            "• `/muagift [số_lượng] [mệnh_giá]` - Mua giftcode (Phí 5%, tổng nạp 100k)\n"
-            "• `/code [mã_code]` - Nhập giftcode nhận tiền\n"
-            "• `/doidiemvip [số_điểm]` - Đổi điểm VIP (1 điểm = 200đ)\n"
-            "• `/chuyentien [id] [số_tiền]` - Chuyển khoản nội bộ\n\n"
-            "👑 **Admin / Chủ Bot:**\n"
-            "• `/taocode [số_lượng] [tiền]` - Tạo nhanh giftcode\n"
-            "• `/themcode [mã] [tiền]` - Thêm mã tùy chỉnh\n"
-            "• `/xoacode [mã]` - Xóa mã trong kho\n"
-            "• `/danhsachcode` - Xem danh sách giftcode\n"
-            "• `/chinhxucxac [tai/xiu/reset]` - Hack kết quả chuẩn 100%\n"
-            "• `/duyệt [mã_nạp]` - Duyệt nạp tiền & mở khóa Tân thủ"
-        )
+        if user_id in ADMIN_IDS:
+            help_text = (
+                "🔍 **HỆ THỐNG LỆNH HỖ TRỢ (ADMIN)**\n\n"
+                "👤 **Thành viên:**\n"
+                "• `T/X/C/L [tiền]` - Tài/Xỉu/Chẵn/Lẻ\n"
+                "• `/nap [tiền]` - Nạp tiền\n"
+                "• `/rut [tiền]` hoặc `/rut all` - Rút tiền\n"
+                "• `/lsnap`, `/lsrut`, `/lschoi` - Lịch sử\n"
+                "• `/caidatbank [stk] [bank] [tên]` - Cài STK\n"
+                "• `/chuyen [uid] [tiền]` - Chuyển tiền\n"
+                "• `/code [mã]` hoặc `/nhapcode [mã]` - Nhập giftcode\n"
+                "• `/muagift [số_lượng] [mệnh_giá]` - Mua giftcode\n"
+                "• `/ref` - Thông tin giới thiệu\n"
+                "• `/doidiemvip [số_điểm]` - Đổi điểm VIP\n\n"
+                "👑 **Admin / Chủ Bot:**\n"
+                "• `/taocode [số_lượng] [tiền]` - Tạo nhanh giftcode\n"
+                "• `/themcode [mã] [tiền]` - Thêm mã tùy chỉnh\n"
+                "• `/xoacode [mã]` - Xóa mã trong kho\n"
+                "• `/danhsachcode` - Xem danh sách giftcode\n"
+                "• `/chinhxucxac [tai/xiu/reset]` - Hack kết quả chuẩn 100%\n"
+                "• `/duyệt [mã_nạp]` - Duyệt nạp tiền & mở khóa Tân thủ"
+            )
+        else:
+            help_text = (
+                "📜 **DANH SÁCH LỆNH**\n\n"
+                "🎲 **Game Tài Xỉu:**\n"
+                "• `T/X/C/L [tiền]` — Tài/Xỉu/Chẵn/Lẻ\n\n"
+                "💰 **TÀI KHOẢN:**\n"
+                "• `/nap [tiền]` — Nạp tiền\n"
+                "• `/rut [tiền]` hoặc `/rut all` — Rút tiền\n"
+                "• `/lsnap`, `/lsrut`, `/lschoi` — Lịch sử\n"
+                "• `/caidatbank [stk] [mã_bank] [tên]` — Cài STK\n"
+                "• `/chuyen [uid] [tiền]` — Chuyển tiền nội bộ\n\n"
+                "🎁 **KHÁC:**\n"
+                "• `/code [mã]` hoặc `/nhapcode [mã]` — Nhập giftcode\n"
+                "• `/muagift [số_lượng] [mệnh_giá]` — Mua giftcode\n"
+                "• `/ref` — Thông tin giới thiệu\n"
+                "• `/doidiemvip [số_điểm]` — Đổi điểm VIP"
+            )
         await update.message.reply_text(help_text, parse_mode="Markdown")
+
+# --- LỆNH CÀI ĐẶT NGÂN HÀNG & RÚT TIỀN ---
+async def caidatbank_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user = get_user(user_id)
+    args = context.args
+
+    if len(args) < 3:
+        await update.message.reply_text(
+            "⚠️ Sai cú pháp! Vui lòng dùng:\n"
+            "`/caidatbank [stk] [ngân_hàng] [tên_chủ_tài_khoản]`\n"
+            "Ví dụ: `/caidatbank 9520252005 MB LUC THUY LINH`",
+            parse_mode="Markdown"
+        )
+        return
+
+    stk = args[0]
+    ngan_hang = args[1].upper()
+    ten_chu_tk = " ".join(args[2:]).upper()
+
+    user["bank_info"] = f"{stk} - {ngan_hang} - {ten_chu_tk}"
+    await update.message.reply_text(
+        f"✅ **CÀI ĐẶT TÀI KHOẢN NGÂN HÀNG THÀNH CÔNG!**\n\n"
+        f"🧾 STK của bạn: `{user['bank_info']}`\n\n"
+        f"Bây giờ bạn có thể bấm nút **Rút Tiền** ở menu chính để thực hiện lệnh rút.",
+        parse_mode="Markdown"
+    )
+
+async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user = get_user(user_id)
+    args = context.args
+
+    if not user["bank_info"]:
+        await update.message.reply_text(
+            "❌ Bạn chưa cài đặt tài khoản ngân hàng!\n"
+            "Vui lòng dùng lệnh: `/caidatbank [stk] [ngân_hàng] [tên]` trước khi rút tiền.",
+            parse_mode="Markdown"
+        )
+        return
+
+    if not args:
+        await update.message.reply_text(
+            "⚠️ Vui lòng nhập số tiền muốn rút hoặc rút tối đa:\n"
+            "• `/rut 50000`\n"
+            "• `/rut all`",
+            parse_mode="Markdown"
+        )
+        return
+
+    try:
+        if args[0].lower() == "all":
+            if user["balance"] < 50000:
+                await update.message.reply_text("❌ Số dư tối thiểu để rút là `50,000 VNĐ`!", parse_mode="Markdown")
+                return
+            rut_tien = user["balance"]
+        else:
+            rut_tien = int(args[0])
+            if rut_tien < 50000:
+                await update.message.reply_text("❌ Số tiền rút tối thiểu là `50,000 VNĐ`!", parse_mode="Markdown")
+                return
+            if rut_tien > user["balance"]:
+                await update.message.reply_text("❌ Số dư tài khoản không đủ để thực hiện lệnh rút này!", parse_mode="Markdown")
+                return
+    except ValueError:
+        await update.message.reply_text("⚠️ Số tiền rút phải là số hợp lệ hoặc chữ `all`!", parse_mode="Markdown")
+        return
+
+    phi = int(rut_tien * 0.01) # Phí rút 1%
+    thuc_nhan = rut_tien - phi
+    user["balance"] -= rut_tien
+    user["history_rut"].append(f"Rút {rut_tien:,}đ (Thực nhận: {thuc_nhan:,}đ, Phí: {phi:,}đ) về {user['bank_info']}")
+
+    await update.message.reply_text(
+        f"✅ **GỬI YÊU CẦU RÚT TIỀN THÀNH CÔNG!**\n\n"
+        f"💸 Số tiền rút: `{rut_tien:,} VNĐ`\n"
+        f"📉 Phí giao dịch (1%): `{phi:,} VNĐ`\n"
+        f"💰 Thực nhận: `{thuc_nhan:,} VNĐ`\n"
+        f"🏦 Tài khoản nhận: `{user['bank_info']}`\n\n"
+        f"⏳ Giao dịch đang chờ Admin xử lý chuyển khoản tự động trong ít phút!",
+        parse_mode="Markdown"
+    )
 
 # --- XỬ LÝ NÚT INLINE & GAME ---
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -153,7 +313,22 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = get_user(user_id)
     data = query.data
 
-    if data == "ls_nap":
+    if data.startswith("nap_") and data != "nap_nganhang":
+        amount_str = data.replace("nap_", "")
+        amount = int(amount_str)
+        magd = random.randint(100000, 999999)
+        await query.message.reply_text(
+            f"➕ **THÔNG TIN CHUYỂN KHOẢN NẠP {amount:,} VNĐ**\n\n"
+            f"🏦 Ngân hàng: MBBANK\n"
+            f"📌 STK: `0328122738`\n"
+            f"💰 Chủ TK: TRAN TRAM ANH\n"
+            f"💵 Số tiền: `{amount:,} VNĐ`\n"
+            f"📝 Nội dung chuyển khoản: `NAP{user_id}{magd}`\n\n"
+            f"⚠️ *Lưu ý:* Chuyển chính xác số tiền và nội dung trên. Sau khi chuyển xong, báo admin duyệt lệnh: `/duyệt {magd}`",
+            parse_mode="Markdown"
+        )
+
+    elif data == "ls_nap":
         history = "\n".join(user["history_nap"]) if user["history_nap"] else "Chưa có lịch sử nạp tiền."
         await query.message.reply_text(f"📈 **LỊCH SỬ NẠP**\n\n{history}", parse_mode="Markdown")
     
@@ -205,14 +380,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("🎧 Hỗ trợ trực tuyến 24/7 qua CSKH.")
 
     elif data == "nap_nganhang":
+        magd = random.randint(100000, 999999)
         await query.message.reply_text(
             "➕ **THÔNG TIN CHUYỂN KHOẢN NẠP TIỀN**\n\n"
             "🏦 Ngân hàng: MBBANK\n"
-            "📌 STK: `8328122728`\n"
+            "📌 STK: `0328122738`\n"
             "💰 Chủ TK: TRAN TRAM ANH\n"
-            "📝 Nội dung: `NAP8682451039`\n\n"
+            f"📝 Nội dung: `NAP{user_id}{magd}`\n\n"
             "⚠️ *Lưu ý:* Nạp tối thiểu `50.000 VNĐ` để mở khóa, thoát trạng thái Tân thủ và bỏ giới hạn max cược 10k!\n"
-            "👉 Báo admin duyệt bằng lệnh: `/duyệt [mã_giao_dịch]`",
+            f"👉 Báo admin duyệt bằng lệnh: `/duyệt {magd}`",
             parse_mode="Markdown"
         )
 
@@ -443,6 +619,8 @@ async def main_async():
     
     # Đăng ký các lệnh
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("caidatbank", caidatbank_command))
+    application.add_handler(CommandHandler("rut", rut_command))
     application.add_handler(CommandHandler("duyet", duyet_command))
     application.add_handler(CommandHandler("taocode", taocode_command))
     application.add_handler(CommandHandler("themcode", themcode_command))
@@ -450,6 +628,7 @@ async def main_async():
     application.add_handler(CommandHandler("danhsachcode", danhsachcode_command))
     application.add_handler(CommandHandler("muagift", muagift_command))
     application.add_handler(CommandHandler("code", code_command))
+    application.add_handler(CommandHandler("nhapcode", code_command))
     application.add_handler(CommandHandler("doidiemvip", doidiemvip_command))
     application.add_handler(CommandHandler("chinhxucxac", chinhxucxac_command))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
