@@ -4,7 +4,6 @@ import asyncio
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
-
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -132,7 +131,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         full_name_choice = {"T": "TÀI", "X": "XỈU", "C": "CHẮN", "L": "LẺ"}[choice]
         
-        # Phản hồi cá nhân cho người chơi
         keyboard = [[InlineKeyboardButton("🐸 Ẩn Danh", callback_data="an_danh")]]
         await update.message.reply_text(
             f"🏆 **Đặt thành công phiên XX**\n"
@@ -142,7 +140,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-        # Gửi thông báo nhận cược công khai vào nhóm chat (nếu có cài GROUP_CHAT_ID)
         if GROUP_CHAT_ID:
             try:
                 await context.bot.send_message(
@@ -158,7 +155,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
         return
 
-    # Xử lý các nút Menu chính cá nhân
     if text == "📄 Tài khoản":
         update_vip(user)
         keyboard = [
@@ -279,7 +275,6 @@ async def caidatbank_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user["bank_info"] = f"{args[0]} - {args[1].upper()} - {' '.join(args[2:]).upper()}"
     await update.message.reply_text(f"✅ Đã cài đặt STK thành công: `{user['bank_info']}`", parse_mode="Markdown")
 
-# --- LỆNH RÚT TIỀN (GỬI THÔNG BÁO CÔNG KHAI VÀO NHÓM) ---
 async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user = get_user(user_id)
@@ -302,7 +297,6 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user["balance"] -= rut_tien
     user["history_rut"].append(f"Rút {rut_tien:,}đ về {user['bank_info']}")
     
-    # 1. Gửi thông báo về cho Admin
     for admin_id in ADMIN_IDS:
         try:
             await context.bot.send_message(
@@ -313,7 +307,6 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
 
-    # 2. Gửi thông báo công khai lên nhóm chat
     if GROUP_CHAT_ID:
         try:
             await context.bot.send_message(
@@ -338,7 +331,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         magd = random.randint(100000, 999999)
         pending_nap[str(magd)] = {"user_id": user_id, "amount": amount}
         
-        # Gửi thông báo mã nạp về cho Admin
         for admin_id in ADMIN_IDS:
             try:
                 await context.bot.send_message(
@@ -349,7 +341,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception:
                 pass
 
-        # Gửi thông báo công khai lên nhóm chat
         if GROUP_CHAT_ID:
             try:
                 await context.bot.send_message(
@@ -401,7 +392,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         magd = random.randint(100000, 999999)
         pending_nap[str(magd)] = {"user_id": user_id, "amount": 50000}
         
-        if GROUP_CHAT_ID:-1004222063034
+        if GROUP_CHAT_ID:
             try:
                 await context.bot.send_message(
                     chat_id=GROUP_CHAT_ID,
@@ -431,7 +422,7 @@ async def run_taixiu_loop(application):
             session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
             user_session_bets = {}
             
-            target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
+            target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else -1004222063034
             
             start_text = (
                 f"🐸 **ET88 - TUNG XX** 🎲\n"
