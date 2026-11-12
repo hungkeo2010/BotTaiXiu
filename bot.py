@@ -57,7 +57,7 @@ pending_rut = {}
 ADMIN_IDS = [8682451039]
 
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
-GROUP_CHAT_ID = -1004222063034  
+GROUP_CHAT_ID = -1004222063034 
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
@@ -65,10 +65,11 @@ current_session = 200000
 huvang_pool = 295000
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
+user_session_total_bet = {} # Lưu tổng tiền cược của mỗi user trong phiên hiện tại để xét điều kiện nhận thưởng
 history_sessions = [] 
-is_betting_open = False  # Trạng thái cho phép đặt cược hay không
-current_dealer = None    # Người làm cái hiện tại
-lucky_number = 79        # Số may mắn của phiên
+is_betting_open = False  
+lucky_number = 79        
+lucky_reward = 50000     # Tiền thưởng ngẫu nhiên của phiên
 
 is_loop_running = False  
 
@@ -144,7 +145,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     parts = text.split()
     if len(parts) == 2 and parts[0].upper() in ["T", "X", "C", "L"]:
-        # Kiểm tra nếu đã đóng cửa cược thì không cho phép đặt
         if not is_betting_open:
             await update.message.reply_text("❌ Đã hết thời gian đặt cược cho phiên này! Vui lòng chờ phiên sau.", parse_mode="Markdown")
             return
@@ -189,6 +189,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user_id not in user_session_bets:
             user_session_bets[user_id] = {"T": 0, "X": 0, "C": 0, "L": 0}
         user_session_bets[user_id][choice] += bet_amount
+
+        # Cộng tổng tiền cược của user trong phiên để xét điều kiện nhận thưởng (yêu cầu >= 20k)
+        user_session_total_bet[user_id] = user_session_total_bet.get(user_id, 0) + bet_amount
 
         await update.message.reply_text(
             f"🌟 **Đặt thành công phiên XX #{current_session}**\n"
@@ -303,7 +306,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🎲 **Game Tài Xỉu:**\n"
             "• `T/X/C/L [tiền]` (VD: `T 10k`, `T all`) — Cược Tài/Xỉu/Chẵn/Lẻ\n"
             "• `/lamcai [số tiền]` — Làm cái (1M - 5M)\n"
-            "• `/nhanthuong` — Nhận thưởng nếu trùng số may mắn\n"
+            "• `/nhanthuong` — Nhận thưởng sự kiện (Cần cược tối thiểu 20k trong phiên)\n"
             "• `/sd` hoặc `/sodu` — Kiểm tra số dư\n\n"
             "💰 **TÀI KHOẢN:**\n"
             "• `/nap [tiền]` — Nạp tiền\n"
@@ -315,7 +318,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(help_text, parse_mode="Markdown")
 
 async def lamcai_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global current_dealer
     user_id = update.effective_user.id
     user = get_user(user_id)
     args = context.args
@@ -339,7 +341,6 @@ async def lamcai_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     user["balance"] -= tien_cai
-    current_dealer = user_id
     save_data()
     await update.message.reply_text(f"✅ Đăng ký làm cái thành công với số tiền thế chấp `{tien_cai:,}đ`!", parse_mode="Markdown")
 
@@ -348,18 +349,28 @@ async def nhanthuong_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user = get_user(user_id)
     user_id_str = str(user_id)
     
+    # Kiểm tra điều kiện: User phải cược tổng tối thiểu 20.000đ trong phiên hiện tại
+    user_bet_in_session = user_session_total_bet.get(user_id, 0)
+    if user_bet_in_session < 20000:
+        await update.message.reply_text(
+            f"❌ Bạn chưa đủ điều kiện nhận thưởng!\n"
+            f"📌 Yêu cầu: Cần cược tối thiểu `20,000đ` trong phiên này (Bạn đã cược: `{user_bet_in_session:,}đ`).",
+            parse_mode="Markdown"
+        )
+        return
+
     if len(user_id_str) < 2:
         await update.message.reply_text("❌ Không đủ điều kiện nhận thưởng.")
         return
         
     last_two_digits = int(user_id_str[-2:])
     if last_two_digits == lucky_number:
-        thuong = 50000
+        thuong = lucky_reward
         user["balance"] += thuong
         save_data()
-        await update.message.reply_text(f"🎉 Chúc mừng! ID của bạn có 2 số cuối khớp với số may mắn `{lucky_number}`. Bạn nhận được `+{thuong:,}đ`", parse_mode="Markdown")
+        await update.message.reply_text(f"🎉 Chúc mừng! ID của bạn có 2 số cuối khớp với số may mắn `{lucky_number:02d}`. Bạn nhận được phần thưởng `+{thuong:,}đ`", parse_mode="Markdown")
     else:
-        await update.message.reply_text(f"❌ 2 số cuối ID của bạn ({last_two_digits}) không trùng với số may mắn ({lucky_number}).")
+        await update.message.reply_text(f"❌ 2 số cuối ID của bạn ({last_two_digits:02d}) không trùng với số may mắn ({lucky_number:02d}).")
 
 async def caidatbank_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -483,13 +494,17 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def run_taixiu_loop(application):
-    global current_session, session_bets, user_session_bets, huvang_pool, forced_dice_result, history_sessions, is_betting_open, lucky_number
+    global current_session, session_bets, user_session_bets, user_session_total_bet, huvang_pool, forced_dice_result, history_sessions, is_betting_open, lucky_number, lucky_reward
     
     while True:
         session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
         user_session_bets = {}
-        is_betting_open = True  # Mở cửa nhận cược
+        user_session_total_bet = {}  # Reset tổng cược của các user cho phiên mới
+        is_betting_open = True  
+        
+        # Sinh ngẫu nhiên số may mắn (00-99) và tiền thưởng ngẫu nhiên (từ 10k đến 100k)
         lucky_number = random.randint(0, 99)
+        lucky_reward = random.choice([10000, 20000, 30000, 50000, 70000, 100000])
         
         target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
         
@@ -731,13 +746,14 @@ async def run_taixiu_loop(application):
                     reply_markup=InlineKeyboardMarkup(keyboard_kq)
                 )
                 
-                # Gửi thông báo số may mắn cho phiên tiếp theo
+                # Gửi thông báo số may mắn và tiền thưởng ngẫu nhiên cho phiên tiếp theo (yêu cầu cược >= 20k)
                 await application.bot.send_message(
                     chat_id=target_chat,
                     text=(
                         f"🍀 **Con số may mắn của phiên này: {lucky_number:02d}**\n"
-                        f"🎁 **Tiền thưởng: 50,000đ**\n"
-                        f"Nếu 2 số cuối ID của bạn trùng số may mắn thì chat lệnh `/nhanthuong` để nhận."
+                        f"🎁 **Tiền thưởng ngẫu nhiên: {lucky_reward:,}đ**\n"
+                        f"⚠️ **Điều kiện:** Phải cược tối thiểu `20,000đ` trong phiên này mới được nhận thưởng.\n"
+                        f"Nếu 2 số cuối ID của bạn trùng số may mắn, hãy chat lệnh `/nhanthuong` để nhận."
                     ),
                     parse_mode="Markdown"
                 )
