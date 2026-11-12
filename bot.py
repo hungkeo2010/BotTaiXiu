@@ -18,7 +18,7 @@ pending_nap = {}
 ADMIN_IDS = [8682451039]
 
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
-GROUP_CHAT_ID = -1004222063034 
+GROUP_CHAT_ID = -1004222063034
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
@@ -696,7 +696,7 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("🔄 Đã reset xúc xắc ngẫu nhiên.")
 
 # --- KHỞI CHẠY CHÍNH BẢO VỆ CHỐNG LẶP (LOCK FLAG) ---
-TOKEN = "9119986491:AAG_LxcqiNMONdH1CxPm1t66HcVP5PqeYwI"
+TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
 
 async def main():
     global is_loop_running
