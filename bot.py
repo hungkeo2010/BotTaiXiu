@@ -1,7 +1,12 @@
 import logging
 import random
 import asyncio
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
+import json
+import os
+import http.server
+import socketserver
+import threading
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 logging.basicConfig(
@@ -9,8 +14,48 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+# --- TẠO WEB SERVER GIẢ LẬP ĐỂ RENDER KHÔNG BỊ TIMEOUT (GIÚP CHẠY 24/7) ---
+PORT = int(os.environ.get("PORT", 10000))
+
+class HealthCheckHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is alive and running 24/7!")
+
+def run_web_server():
+    try:
+        with socketserver.TCPServer(("", PORT), HealthCheckHandler) as httpd:
+            logging.info(f"Web server running on port {PORT}")
+            httpd.serve_forever()
+    except Exception as e:
+        logging.error(f"Web server error: {e}")
+
+# Chạy web server ở luồng phụ (background thread)
+threading.Thread(target=run_web_server, daemon=True).start()
+
+# --- QUẢN LÝ DỮ LIỆU BỀN VỮNG (LƯU RA FILE JSON) ---
+DB_FILE = "database.json"
+
+def load_data():
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return {int(k): v for k, v in data.items()}
+        except Exception as e:
+            logging.error(f"Lỗi đọc database: {e}")
+    return {}
+
+def save_data():
+    try:
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(users_db, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        logging.error(f"Lỗi lưu database: {e}")
+
 # --- DỮ LIỆU HỆ THỐNG ---
-users_db = {}       
+users_db = load_data()       
 giftcode_db = {}    
 pending_nap = {}    
 
@@ -22,8 +67,8 @@ GROUP_CHAT_ID = -1004222063034
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
-current_session = 199850
-huvang_pool = 293000
+current_session = 200000
+huvang_pool = 295000
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
 history_sessions = [] 
@@ -42,6 +87,7 @@ def get_user(user_id):
             "history_rut": [],
             "history_choi": []
         }
+        save_data()
     return users_db[user_id]
 
 def update_vip(user_data):
@@ -81,7 +127,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=get_main_menu())
 
-# --- XỬ LÝ ĐẶT CƯỢC ---
+async def sodu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user = get_user(user_id)
+    await update.message.reply_text(
+        f"🪙 Số dư : `{user['balance']:,} VNĐ`",
+        parse_mode="Markdown"
+    )
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
@@ -120,6 +173,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         user["balance"] -= bet_amount
         user["total_bet"] += bet_amount
+        save_data()  
         
         session_bets[choice] += bet_amount
         if user_id not in user_session_bets:
@@ -195,10 +249,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         game_text = (
             "🎮 **DANH SÁCH TRÒ CHƠI**\n"
             "Vô nhóm chơi: https://t.me/tuanhung88chat\n\n"
-            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài[span_0](start_span)[span_0](end_span).\n"
-            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu[span_1](start_span)[span_1](end_span).\n"
-            "- **C**: Tổng 3 viên XX là Chẵn[span_2](start_span)[span_2](end_span).\n"
-            "- **L**: Tổng 3 viên XX là Lẻ[span_3](start_span)[span_3](end_span).\n\n"
+            "- **T**: Tổng 3 viên XX từ 11 - 18 Tài.\n"
+            "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu.\n"
+            "- **C**: Tổng 3 viên XX là Chẵn.\n"
+            "- **L**: Tổng 3 viên XX là Lẻ.\n\n"
             "📌 **Tỷ lệ trả thưởng:**\n"
             "- T/X/C/L: x1.95\n"
             "👉 Tối thiểu 100 và tối đa mỗi bên 3.000.000"
@@ -237,7 +291,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text = (
             "📜 **DANH SÁCH LỆNH**\n\n"
             "🎲 **Game Tài Xỉu:**\n"
-            "• `T/X/C/L [tiền]` — Tài/Xỉu/Chẵn/Lẻ\n\n"
+            "• `T/X/C/L [tiền]` — Tài/Xỉu/Chẵn/Lẻ\n"
+            "• `/sd` hoặc `/sodu` — Kiểm tra số dư\n\n"
             "💰 **TÀI KHOẢN:**\n"
             "• `/nap [tiền]` — Nạp tiền\n"
             "• `/rut [tiền]` hoặc `/rut all` — Rút tiền (Min 100k - Max 10M)\n"
@@ -258,6 +313,7 @@ async def caidatbank_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("⚠️ Dùng: `/caidatbank [stk] [ngân_hàng] [tên]`", parse_mode="Markdown")
         return
     user["bank_info"] = f"{args[0]} - {args[1].upper()} - {' '.join(args[2:]).upper()}"
+    save_data()
     await update.message.reply_text(f"✅ Đã cài đặt STK thành công: `{user['bank_info']}`", parse_mode="Markdown")
 
 async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -287,6 +343,7 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user["balance"] -= rut_tien
     user["history_rut"].append(f"Rút {rut_tien:,}đ về {user['bank_info']}")
+    save_data()
     
     for admin_id in ADMIN_IDS:
         try:
@@ -341,6 +398,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         u = get_user(user_id)
         t = int(u["total_bet"] * 0.004)
         u["balance"] += t
+        save_data()
         await query.message.reply_text(f"🎁 Nhận hoàn cược: `+{t:,}đ`", parse_mode="Markdown")
     elif data == "ho_tro":
         await query.message.reply_text("🎧 Hỗ trợ 24/7.")
@@ -354,7 +412,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-# --- VÒNG LẶP PHIÊN TÀI XỈU (ÉP KẾT QUẢ NGAY LẬP TỨC TRONG PHIÊN) ---
 async def run_taixiu_loop(application):
     global current_session, session_bets, user_session_bets, huvang_pool, forced_dice_result, history_sessions
     
@@ -376,6 +433,10 @@ async def run_taixiu_loop(application):
         
         if target_chat:
             try:
+                await application.bot.set_chat_permissions(
+                    chat_id=target_chat,
+                    permissions=ChatPermissions(can_send_messages=True)
+                )
                 await application.bot.send_message(chat_id=target_chat, text=start_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard_start))
             except Exception:
                 pass
@@ -402,15 +463,18 @@ async def run_taixiu_loop(application):
         
         if target_chat:
             try:
+                await application.bot.set_chat_permissions(
+                    chat_id=target_chat,
+                    permissions=ChatPermissions(can_send_messages=False)
+                )
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Hết thời gian đặt cược phiên #{current_session}**", parse_mode="Markdown")
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Bắt đầu tung XX phiên #{current_session}**", parse_mode="Markdown")
             except Exception:
                 pass
         
-        # --- KIỂM TRA LỆNH ÉP NGAY TRONG PHIÊN NÀY ---
         dice_values = []
         if forced_dice_result == "TAI":
-            dice_values = [5, 5, 3]  # Tổng 13 -> TÀI chuẩn xác
+            dice_values = [5, 5, 3]  
             forced_dice_result = None
             if target_chat:
                 for _ in range(3):
@@ -420,7 +484,7 @@ async def run_taixiu_loop(application):
                     except Exception:
                         pass
         elif forced_dice_result == "XIU":
-            dice_values = [2, 2, 3]  # Tổng 7 -> XỈU chuẩn xác
+            dice_values = [2, 2, 3]  
             forced_dice_result = None
             if target_chat:
                 for _ in range(3):
@@ -444,7 +508,6 @@ async def run_taixiu_loop(application):
         dices = tuple(dice_values)
         tong = sum(dices)
         
-        # Phân định kết quả chuẩn xác tuyệt đối (>=11: Tài, <11: Xỉu)
         ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
         ket_qua_cl = "CHẮN" if tong % 2 == 0 else "LẺ"
         
@@ -532,6 +595,7 @@ async def run_taixiu_loop(application):
             tong_thang += thang_user
             tong_thua += thua_user
 
+        save_data() 
         huvang_pool += random.randint(100, 500)
         
         ket_qua_msg = (
@@ -579,6 +643,7 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         u["is_newbie"] = False
         u["balance"] += info["amount"]
         u["history_nap"].append(f"Nạp thành công {info['amount']:,}đ")
+        save_data()
         del pending_nap[ma_gd]
         try:
             await context.bot.send_message(chat_id=info["user_id"], text=f"✅ **NẠP THÀNH CÔNG!**\nCộng `+{info['amount']:,}đ`", parse_mode="Markdown")
@@ -654,6 +719,7 @@ async def code_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if code in giftcode_db:
         val = giftcode_db[code]
         user["balance"] += val
+        save_data()
         del giftcode_db[code]
         await update.message.reply_text(f"🎉 **NHẬP CODE THÀNH CÔNG!**\n🎁 Nhận: `+{val:,} VNĐ`", parse_mode="Markdown")
     else:
@@ -678,6 +744,7 @@ async def muagift_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Không đủ số dư! Cần `{tong_thanh_toan:,}đ` (gồm 5% phí).")
         return
     user["balance"] -= tong_thanh_toan
+    save_data()
     bought_codes = []
     for _ in range(soluong):
         c = available_codes.pop(0)
@@ -712,6 +779,8 @@ async def main():
     application = ApplicationBuilder().token(TOKEN).build()
     
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("sd", sodu_command))
+    application.add_handler(CommandHandler("sodu", sodu_command))
     application.add_handler(CommandHandler("caidatbank", caidatbank_command))
     application.add_handler(CommandHandler("rut", rut_command))
     application.add_handler(CommandHandler("duyet", duyet_command))
