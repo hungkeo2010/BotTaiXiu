@@ -1,11 +1,10 @@
+import nest_asyncio
+nest_asyncio.apply()
 import logging
 import random
-import nest_asyncio
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
-# Kích hoạt nest_asyncio
-nest_asyncio.apply()
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
