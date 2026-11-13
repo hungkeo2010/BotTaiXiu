@@ -1324,7 +1324,7 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         forced_dice_result = None
         await update.message.reply_text("🔄 Đã reset xúc xắc ngẫu nhiên.")
 
-TOKEN = "9286450426:AAHYoubtmQirYbLnmmN3090ea81sABUrxsA"
+TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
 
 async def main():
     global is_loop_running
