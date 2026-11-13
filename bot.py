@@ -589,7 +589,7 @@ async def run_taixiu_loop(application):
             
             target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
             
-            # Mở phiên giống Ảnh 1
+            # Mở phiên đầy đủ như ảnh 2
             start_text = (
                 f"🐸 TuanHung88 - TUNG XX 🎲\n"
                 f"🔥 **Xin mời đặt cược phiên XX**\n"
@@ -606,14 +606,13 @@ async def run_taixiu_loop(application):
                 except Exception as e:
                     logging.error(f"Lỗi gửi tin nhắn mở phiên: {e}")
             
-            # Đếm giây
+            # Đếm giây (đã xóa chữ thừa, chỉ giữ thông báo đếm giờ)
             await asyncio.sleep(20)
             if target_chat:
                 try:
                     await application.bot.send_message(
                         chat_id=target_chat, 
                         text=(
-                            f"🐸 TuanHung88 - TUNG XX 🎲    Tung Xúc Xắc\n"
                             f"🦸‍♂️ **Còn 40 giây phiên #{current_session}**\n"
                             f"🔵 **TÀI: {session_bets['T']:,}**\n"
                             f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
@@ -630,7 +629,6 @@ async def run_taixiu_loop(application):
                     await application.bot.send_message(
                         chat_id=target_chat, 
                         text=(
-                            f"🐸 TuanHung88 - TUNG XX 🎲    Tung Xúc Xắc\n"
                             f"🦸‍♂️ **Còn 20 giây phiên #{current_session}**\n"
                             f"🔵 **TÀI: {session_bets['T']:,}**\n"
                             f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
@@ -647,7 +645,6 @@ async def run_taixiu_loop(application):
                     await application.bot.send_message(
                         chat_id=target_chat, 
                         text=(
-                            f"🐸 TuanHung88 - TUNG XX 🎲    Tung Xúc Xắc\n"
                             f"🦸‍♂️ **Còn 10 giây phiên #{current_session}**\n"
                             f"🔵 **TÀI: {session_bets['T']:,}**\n"
                             f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
@@ -664,9 +661,8 @@ async def run_taixiu_loop(application):
 
             if target_chat:
                 try:
-                    # Khung chốt hết giờ giống Ảnh 2
+                    # Chốt hết giờ
                     end_bet_text = (
-                        f"🐸 TuanHung88 - TUNG XX 🎲    Tung Xúc Xắc\n"
                         f"🦸‍♂️ **Hết thời gian đặt cược phiên**\n"
                         f"**#{current_session}**\n"
                         f"🔵 **TÀI: {session_bets['T']:,}**\n"
@@ -702,30 +698,26 @@ async def run_taixiu_loop(application):
             while len(dice_values) < 3:
                 dice_values.append(random.randint(1, 6))
 
-            # --- ĐIỀU CHỈNH SỐ XÚC XẮC KHỚP TUYỆT ĐỐI VỚI LỆNH ÉP KẾT QUẢ ---
+            # --- THUẬT TOÁN ÉP KẾT QUẢ CHUẨN XÁC 100% ---
             tong = sum(dice_values)
             if current_forced == "TAI":
                 if tong < 11:
-                    d1 = random.randint(3, 6)
-                    d2 = random.randint(3, 6)
-                    d3 = 11 - d1 - d2
-                    if d3 < 1: d3 = 1
-                    if d3 > 6: d3 = 6
-                    while (d1 + d2 + d3) < 11 or (d1 + d2 + d3) > 17:
-                        d1 = random.randint(3, 6)
-                        d2 = random.randint(3, 6)
-                        d3 = random.randint(3, 6)
-                    dice_values = [d1, d2, d3]
+                    while True:
+                        d1 = random.randint(1, 6)
+                        d2 = random.randint(1, 6)
+                        d3 = random.randint(1, 6)
+                        if 11 <= (d1 + d2 + d3) <= 17:
+                            dice_values = [d1, d2, d3]
+                            break
             elif current_forced == "XIU":
                 if tong > 10:
-                    d1 = random.randint(1, 3)
-                    d2 = random.randint(1, 3)
-                    d3 = random.randint(1, 4)
-                    while (d1 + d2 + d3) < 4 or (d1 + d2 + d3) > 10:
-                        d1 = random.randint(1, 3)
-                        d2 = random.randint(1, 3)
-                        d3 = random.randint(1, 4)
-                    dice_values = [d1, d2, d3]
+                    while True:
+                        d1 = random.randint(1, 6)
+                        d2 = random.randint(1, 6)
+                        d3 = random.randint(1, 6)
+                        if 4 <= (d1 + d2 + d3) <= 10:
+                            dice_values = [d1, d2, d3]
+                            break
 
             tong = sum(dice_values)
             ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
