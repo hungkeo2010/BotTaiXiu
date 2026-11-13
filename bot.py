@@ -584,31 +584,20 @@ async def run_taixiu_loop(application):
             is_betting_open = True  
             
             lucky_number = random.randint(0, 99)
-            # Thưởng ngẫu nhiên từ 5k đến 50k (chia hết cho 1000)
+            # Thưởng ngẫu nhiên từ 5k đến 50k
             lucky_reward = random.randint(5, 50) * 1000
             
             target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
             
             start_text = (
-                f"ET88 - TUNG XX 🎲\n"
-                f"💥 Hết thời gian đặt cược phiên\n"
-                f"#{current_session}\n"
-                f"🔵 TÀI: {session_bets['T']:,}\n"
-                f"🔴 XỈU: {session_bets['X']:,}\n\n"
-                f"⚪ CHẴN: {session_bets['C']:,}\n"
-                f"⚫ LẺ: {session_bets['L']:,}"
-            )
-            # Bản tin mở phiên mới dạng ảnh 1
-            start_msg_text = (
                 f"ET88 - TUNG XX 🎲    Tung Xúc Xắc\n"
-                f"🦸‍♂️ Hết thời gian đặt cược phiên\n"
-                f"#{current_session}\n"
-                f"🔵 TÀI: {session_bets['T']:,}\n"
-                f"🔴 XỈU: {session_bets['X']:,}\n\n"
-                f"⚪ CHẴN: {session_bets['C']:,}\n"
-                f"⚫ LẺ: {session_bets['L']:,}"
+                f"🦸‍♂️ **Xin mời đặt cược phiên XX**\n"
+                f"**#{current_session}**\n\n"
+                f"🔵 **TÀI: {session_bets['T']:,}**\n"
+                f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
+                f"⚪ **CHẴN: {session_bets['C']:,}**\n"
+                f"⚫ **LẺ: {session_bets['L']:,}**"
             )
-            
             keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/tuanhung88_bot")]]
             
             if target_chat:
@@ -617,16 +606,65 @@ async def run_taixiu_loop(application):
                 except Exception as e:
                     logging.error(f"Lỗi gửi tin nhắn mở phiên: {e}")
             
+            # Đếm giây như cũ
             await asyncio.sleep(20)
+            if target_chat:
+                try:
+                    await application.bot.send_message(
+                        chat_id=target_chat, 
+                        text=(
+                            f"ET88 - TUNG XX 🎲    Tung Xúc Xắc\n"
+                            f"🦸‍♂️ **Còn 40 giây phiên #{current_session}**\n"
+                            f"🔵 **TÀI: {session_bets['T']:,}**\n"
+                            f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
+                            f"⚪ **CHẴN: {session_bets['C']:,}**\n"
+                            f"⚫ **LẺ: {session_bets['L']:,}**"
+                        ), 
+                        parse_mode="Markdown"
+                    )
+                except Exception:
+                    pass
             await asyncio.sleep(20)
+            if target_chat:
+                try:
+                    await application.bot.send_message(
+                        chat_id=target_chat, 
+                        text=(
+                            f"ET88 - TUNG XX 🎲    Tung Xúc Xắc\n"
+                            f"🦸‍♂️ **Còn 20 giây phiên #{current_session}**\n"
+                            f"🔵 **TÀI: {session_bets['T']:,}**\n"
+                            f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
+                            f"⚪ **CHẴN: {session_bets['C']:,}**\n"
+                            f"⚫ **LẺ: {session_bets['L']:,}**"
+                        ), 
+                        parse_mode="Markdown"
+                    )
+                except Exception:
+                    pass
             await asyncio.sleep(10)
+            if target_chat:
+                try:
+                    await application.bot.send_message(
+                        chat_id=target_chat, 
+                        text=(
+                            f"ET88 - TUNG XX 🎲    Tung Xúc Xắc\n"
+                            f"🦸‍♂️ **Còn 10 giây phiên #{current_session}**\n"
+                            f"🔵 **TÀI: {session_bets['T']:,}**\n"
+                            f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
+                            f"⚪ **CHẴN: {session_bets['C']:,}**\n"
+                            f"⚫ **LẺ: {session_bets['L']:,}**"
+                        ), 
+                        parse_mode="Markdown"
+                    )
+                except Exception:
+                    pass
             await asyncio.sleep(10)
             
             is_betting_open = False  
 
             if target_chat:
                 try:
-                    # Gửi bảng tổng kết cược khi hết giờ giống hệt ảnh 1
+                    # Khung hiển thị hết thời gian đặt cược chuẩn giống ảnh 1
                     end_bet_text = (
                         f"ET88 - TUNG XX 🎲    Tung Xúc Xắc\n"
                         f"🦸‍♂️ **Hết thời gian đặt cược phiên**\n"
