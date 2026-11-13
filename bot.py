@@ -509,7 +509,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
 
         noi_dung_ck = f"NAP{user_id}{magd}"
-        # ĐÃ XÓA ẢNH QR, CHỈ GIỮ LẠI THÔNG TIN VĂN BẢN
         caption_text = (
             f"🟩 **THÔNG TIN NẠP TIỀN**\n\n"
             f"🆔 ID: `{user_id}`\n"
@@ -557,7 +556,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pending_nap[str(magd)] = {"user_id": user_id, "amount": 50000}
         
         noi_dung_ck = f"NAP{user_id}{magd}"
-        # ĐÃ XÓA ẢNH QR, CHỈ GIỮ LẠI THÔNG TIN VĂN BẢN
         caption_text = (
             f"🟩 **THÔNG TIN NẠP TIỀN**\n\n"
             f"🆔 ID: `{user_id}`\n"
@@ -672,7 +670,7 @@ async def run_taixiu_loop(application):
             except Exception:
                 pass
         
-        # --- CƠ CHẾ TUNG XÚC XẮC THẬT CỦA TELEGRAM ĐẢM BẢO KHỚP 100% KẾT QUẢ ĐÃ CHỈNH ---
+        # --- TUNG VÀ XÓA SIÊU TỐC TỪNG VIÊN (KHÔNG DELAY KHI SAI) ---
         dice_values = []
         current_forced = forced_dice_result  
         forced_dice_result = None  
@@ -683,36 +681,37 @@ async def run_taixiu_loop(application):
                     try:
                         msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
                         val = msg_d.dice.value
+                        
+                        # Kiểm tra từng viên ngay lập tức:
+                        # Ép TÀI -> Chỉ lấy mặt 4, 5, 6 (3 viên >= 12 điểm -> 100% TÀI)
+                        if current_forced == "TAI" and val < 4:
+                            asyncio.create_task(application.bot.delete_message(chat_id=target_chat, message_id=msg_d.message_id))
+                            continue  # Tung lại ngay không cần sleep
+                            
+                        # Ép XỈU -> Chỉ lấy mặt 1, 2, 3 (3 viên <= 9 điểm -> 100% XỈU)
+                        if current_forced == "XIU" and val > 3:
+                            asyncio.create_task(application.bot.delete_message(chat_id=target_chat, message_id=msg_d.message_id))
+                            continue  # Tung lại ngay không cần sleep
+                        
+                        # Khi viên xúc xắc đã chuẩn, mới giữ lại và chờ 0.5s sang viên tiếp theo
                         dice_values.append(val)
-                        await asyncio.sleep(0.8)
+                        await asyncio.sleep(0.5)
                         break
                     except Exception:
-                        dice_values.append(random.randint(1, 6))
-                        break
-            
-            if current_forced:
-                while True:
-                    tong_thu_nghiem = sum(dice_values)
-                    is_tai = tong_thu_nghiem >= 11
-                    
-                    if (current_forced == "TAI" and is_tai) or (current_forced == "XIU" and not is_tai):
-                        break  
-                    
-                    dice_values = []
-                    for _ in range(3):
-                        try:
-                            msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                            dice_values.append(msg_d.dice.value)
-                            await asyncio.sleep(0.8)
-                        except Exception:
+                        if current_forced == "TAI":
+                            dice_values.append(random.randint(4, 6))
+                        elif current_forced == "XIU":
+                            dice_values.append(random.randint(1, 3))
+                        else:
                             dice_values.append(random.randint(1, 6))
+                        break
         else:
             if current_forced == "TAI":
-                dice_values = [5, 4, 3]
+                dice_values = [random.randint(4, 6) for _ in range(3)]
             elif current_forced == "XIU":
-                dice_values = [2, 2, 3]
+                dice_values = [random.randint(1, 3) for _ in range(3)]
             else:
-                dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
+                dice_values = [random.randint(1, 6) for _ in range(3)]
 
         dices = tuple(dice_values)
         tong = sum(dices)
@@ -1054,7 +1053,7 @@ async def thutien_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👤 ID: `{target_user_id}`\n"
         f"💸 Biến động: `{amount:+,}đ`\n"
         f"🪙 Số dư mới: `{target_user['balance']:,}đ`",
-        parse_Mode="Markdown"
+        parse_mode="Markdown"
     )
 
     try:
