@@ -514,12 +514,36 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception:
                 pass
 
-        keyboard = [[InlineKeyboardButton("🐸 Nạp tiền tại đây", url="https://t.me/tuanhung88chat")]]
-        await query.message.reply_text(
-            f"➕ **THÔNG TIN NẠP {amount:,} VNĐ**\nMBBANK | STK: `0328122738`\nNội dung: `NAP{user_id}{magd}`",
-            parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+        noi_dung_ck = f"NAP{user_id}{magd}"
+        caption_text = (
+            f"🟩 **Quét mã nạp tiền**\n\n"
+            f"🆔 ID: `{user_id}`\n"
+            f"🪙 Ví TK: `{get_user(user_id)['balance']:,}`\n\n"
+            f"Số tiền nạp: **{amount:,} VNĐ**\n"
+            f"Tiền thưởng: **+0**\n"
+            f"Dự kiến nhận được: **{amount:,} VNĐ**\n"
+            f"Cách nạp: **BANK**\n"
+            f"Ngân hàng nhận: **TPBANK**\n"
+            f"Tên chủ tài khoản: **LUC TUAN HUNG**\n"
+            f"Số tài khoản: **10006353242**\n"
+            f"Nội dung chuyển khoản:\n`{noi_dung_ck}`\n\n"
+            f"Mã đơn: `DP{random.randint(10000000000000, 99999999999999)}`\n"
+            f"Đơn sẽ hết hạn sau **10 phút**, vui lòng thanh toán trong thời gian này."
         )
+        qr_photo_url = "https://i.imgur.com/your_qr_image.jpg" # Thay link ảnh QR của bạn vào đây
+
+        try:
+            await query.message.reply_photo(
+                photo=qr_photo_url,
+                caption=caption_text,
+                parse_mode="Markdown"
+            )
+        except Exception:
+            await query.message.reply_text(
+                caption_text,
+                parse_mode="Markdown"
+            )
+
     elif data == "ls_nap":
         u = get_user(user_id)
         await query.message.reply_text("\n".join(u["history_nap"]) if u["history_nap"] else "Chưa có lịch sử nạp.")
@@ -548,12 +572,36 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "nap_nganhang":
         magd = random.randint(100000, 999999)
         pending_nap[str(magd)] = {"user_id": user_id, "amount": 50000}
-        keyboard = [[InlineKeyboardButton("🐸 Nạp tiền tại đây", url="https://t.me/tuanhung88chat")]]
-        await query.message.reply_text(
-            f"➕ **THÔNG TIN NẠP 50,000 VNĐ**\nMBBANK | STK: `0328122738`\nNội dung: `NAP{user_id}{magd}`",
-            parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+        
+        noi_dung_ck = f"NAP{user_id}{magd}"
+        caption_text = (
+            f"🟩 **Quét mã nạp tiền**\n\n"
+            f"🆔 ID: `{user_id}`\n"
+            f"🪙 Ví TK: `{get_user(user_id)['balance']:,}`\n\n"
+            f"Số tiền nạp: **50,000 VNĐ**\n"
+            f"Tiền thưởng: **+0**\n"
+            f"Dự kiến nhận được: **50,000 VNĐ**\n"
+            f"Cách nạp: **BANK**\n"
+            f"Ngân hàng nhận: **TPBANK**\n"
+            f"Tên chủ tài khoản: **LUC TUAN HUNG**\n"
+            f"Số tài khoản: **10006353242**\n"
+            f"Nội dung chuyển khoản:\n`{noi_dung_ck}`\n\n"
+            f"Mã đơn: `DP{random.randint(10000000000000, 99999999999999)}`\n"
+            f"Đơn sẽ hết hạn sau **10 phút**, vui lòng thanh toán trong thời gian này."
         )
+        qr_photo_url = "https://i.imgur.com/your_qr_image.jpg"
+        
+        try:
+            await query.message.reply_photo(
+                photo=qr_photo_url,
+                caption=caption_text,
+                parse_mode="Markdown"
+            )
+        except Exception:
+            await query.message.reply_text(
+                caption_text,
+                parse_mode="Markdown"
+            )
 
 async def run_taixiu_loop(application):
     global current_session, session_bets, user_session_bets, user_session_total_bet, huvang_pool, forced_dice_result, history_sessions, is_betting_open, lucky_number, lucky_reward
@@ -747,13 +795,13 @@ async def run_taixiu_loop(application):
                     thang_user += thuong
                     u["balance"] += thuong
                     try:
-                        await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược CHẮN - {bets['C']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
+                        await application.bot.send_message(chat_id=u_id, text=f"✅ **Thắng phiên #{current_session}**\nCược CHẴN - {bets['C']:,}\nTiền nhận: {thuong:,}\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
                     except Exception:
                         pass
                 else:
                     thua_user += bets["C"]
                     try:
-                        await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược CHẮN - {bets['C']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
+                        await application.bot.send_message(chat_id=u_id, text=f"❌ **Thua phiên #{current_session}**\nCược CHẴN - {bets['C']:,}\nTiền nhận: 0\nSố dư mới: {u['balance']:,}", parse_mode="Markdown")
                     except Exception:
                         pass
 
