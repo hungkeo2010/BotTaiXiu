@@ -58,7 +58,7 @@ GROUP_CHAT_ID = -1004222063034
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
-current_session = 200583
+current_session = 200598
 huvang_pool = 295000
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
@@ -589,14 +589,14 @@ async def run_taixiu_loop(application):
             
             target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
             
+            # Mở phiên giống Ảnh 1
             start_text = (
-                f"ET88 - TUNG XX 🎲    Tung Xúc Xắc\n"
-                f"🦸‍♂️ **Xin mời đặt cược phiên XX**\n"
-                f"**#{current_session}**\n\n"
-                f"🔵 **TÀI: {session_bets['T']:,}**\n"
-                f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
-                f"⚪ **CHẴN: {session_bets['C']:,}**\n"
-                f"⚫ **LẺ: {session_bets['L']:,}**"
+                f"🐸 TuanHung88 - TUNG XX 🎲\n"
+                f"🔥 **Xin mời đặt cược phiên XX**\n"
+                f"**#{current_session}** 🔥\n\n"
+                f"💲 **Min: 100 | Max mỗi bên: 3.000.000**\n\n"
+                f"🎯 **Cách chơi: Cửa cược số tiền** (VD: `T 10k`, `T all`)\n"
+                f"🔵 Tài: T | 🔴 Xỉu: X | ⚪ Chẵn: C | ⚫ Lẻ: L"
             )
             keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/tuanhung88_bot")]]
             
@@ -606,14 +606,14 @@ async def run_taixiu_loop(application):
                 except Exception as e:
                     logging.error(f"Lỗi gửi tin nhắn mở phiên: {e}")
             
-            # Đếm giây như cũ
+            # Đếm giây
             await asyncio.sleep(20)
             if target_chat:
                 try:
                     await application.bot.send_message(
                         chat_id=target_chat, 
                         text=(
-                            f"ET88 - TUNG XX 🎲    Tung Xúc Xắc\n"
+                            f"🐸 TuanHung88 - TUNG XX 🎲    Tung Xúc Xắc\n"
                             f"🦸‍♂️ **Còn 40 giây phiên #{current_session}**\n"
                             f"🔵 **TÀI: {session_bets['T']:,}**\n"
                             f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
@@ -630,7 +630,7 @@ async def run_taixiu_loop(application):
                     await application.bot.send_message(
                         chat_id=target_chat, 
                         text=(
-                            f"ET88 - TUNG XX 🎲    Tung Xúc Xắc\n"
+                            f"🐸 TuanHung88 - TUNG XX 🎲    Tung Xúc Xắc\n"
                             f"🦸‍♂️ **Còn 20 giây phiên #{current_session}**\n"
                             f"🔵 **TÀI: {session_bets['T']:,}**\n"
                             f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
@@ -647,7 +647,7 @@ async def run_taixiu_loop(application):
                     await application.bot.send_message(
                         chat_id=target_chat, 
                         text=(
-                            f"ET88 - TUNG XX 🎲    Tung Xúc Xắc\n"
+                            f"🐸 TuanHung88 - TUNG XX 🎲    Tung Xúc Xắc\n"
                             f"🦸‍♂️ **Còn 10 giây phiên #{current_session}**\n"
                             f"🔵 **TÀI: {session_bets['T']:,}**\n"
                             f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
@@ -664,9 +664,9 @@ async def run_taixiu_loop(application):
 
             if target_chat:
                 try:
-                    # Khung hiển thị hết thời gian đặt cược chuẩn giống ảnh 1
+                    # Khung chốt hết giờ giống Ảnh 2
                     end_bet_text = (
-                        f"ET88 - TUNG XX 🎲    Tung Xúc Xắc\n"
+                        f"🐸 TuanHung88 - TUNG XX 🎲    Tung Xúc Xắc\n"
                         f"🦸‍♂️ **Hết thời gian đặt cược phiên**\n"
                         f"**#{current_session}**\n"
                         f"🔵 **TÀI: {session_bets['T']:,}**\n"
