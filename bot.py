@@ -58,7 +58,7 @@ GROUP_CHAT_ID = -1004222063034
 
 # Biến toàn cục quản lý phiên Tài Xỉu (Bắt đầu từ phiên #200583)
 forced_dice_result = None
-current_session = 200590
+current_session = 200583
 huvang_pool = 295000
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
@@ -670,7 +670,7 @@ async def run_taixiu_loop(application):
             except Exception:
                 pass
         
-        # --- CƠ CHẾ KHÔNG XÓA TIN NHẮN: TUNG ĐỦ 3 VIÊN TỰ NHIÊN, ÉP ĐIỂM SỐ CHUẨN TÀI/XỈU ---
+        # --- TUNG XÚC XẮC AN TOÀN, KHÔNG LỖI, KHÔNG XÓA TIN NHẮN ---
         dice_values = []
         current_forced = forced_dice_result  
         forced_dice_result = None  
@@ -679,21 +679,25 @@ async def run_taixiu_loop(application):
             for _ in range(3):
                 try:
                     msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                    dice_values.append(msg_d.dice.value)
+                    # Dùng getattr để tránh lỗi nếu đối tượng dice chưa load xong giá trị
+                    val = getattr(msg_d.dice, 'value', None)
+                    if val is None:
+                        val = random.randint(1, 6)
+                    dice_values.append(val)
                     await asyncio.sleep(0.8)
                 except Exception:
                     dice_values.append(random.randint(1, 6))
         else:
             dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
 
-        # Nếu admin có dùng lệnh chỉnh Tài/Xỉu, tự động quy đổi tổng điểm kết quả cho khớp tuyệt đối 100%
+        # Nếu admin chỉnh Tài/Xỉu, quy đổi tổng điểm chuẩn xác
         tong = sum(dice_values)
         if current_forced == "TAI":
             if tong < 11:
-                tong = random.randint(11, 17) # Ép tổng tự động sang Tài (11-17)
+                tong = random.randint(11, 17)
         elif current_forced == "XIU":
             if tong > 10:
-                tong = random.randint(4, 10)  # Ép tổng tự động sang Xỉu (4-10)
+                tong = random.randint(4, 10)
 
         ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
         ket_qua_cl = "CHẴN" if tong % 2 == 0 else "LẺ"
