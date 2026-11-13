@@ -5,7 +5,7 @@ import json
 import os
 import threading
 from flask import Flask
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 logging.basicConfig(
@@ -26,7 +26,7 @@ def run_web_server():
 
 threading.Thread(target=run_web_server, daemon=True).start()
 
-# --- QUẢN LÝ DỮ LIỆU BỀN VỮNG (LƯU RA FILE JSON ĐỂ KHÔNG BỘC MẤT KHI RESTART) ---
+# --- QUẢN LÝ DỮ LIỆU BỀN VỮNG (LƯU RA FILE JSON) ---
 DB_FILE = "database.json"
 
 def load_data():
@@ -215,26 +215,39 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         user_session_total_bet[user_id] = user_session_total_bet.get(user_id, 0) + bet_amount
 
-        await update.message.reply_text(
-            f"🌟 **Đặt thành công phiên XX #{current_session}**\n"
-            f"{choice} {bet_amount:,}\n"
-            f"Số dư sau khi cược: {user['balance']:,}",
-            parse_mode="Markdown"
-        )
+        chat_type = update.message.chat.type
 
-        if GROUP_CHAT_ID:
-            try:
-                await context.bot.send_message(
-                    chat_id=GROUP_CHAT_ID,
-                    text=(
-                        f"🏆 **Đặt thành công phiên XX**\n"
-                        f"**#{current_session}**\n"
-                        f"{choice} `{bet_amount:,}` 🐸 **Ẩn Danh (ID: {user_id})**"
-                    ),
-                    parse_mode="Markdown"
-                )
-            except Exception:
-                pass
+        if chat_type in ["group", "supergroup"]:
+            # Cược trực tiếp trong nhóm chat chung -> Hiển thị form ngắn gọn tại nhóm
+            await update.message.reply_text(
+                f"🌟 **Đặt thành công phiên XX**\n"
+                f"**#{current_session}**\n"
+                f"{choice} {bet_amount:,}\n"
+                f"Số dư sau khi cược: {user['balance']:,}",
+                parse_mode="Markdown"
+            )
+        else:
+            # Cược trong bot (chat riêng) -> Phản hồi riêng cho khách & đẩy thông báo ẩn danh lên nhóm chung
+            await update.message.reply_text(
+                f"🌟 **Đặt thành công phiên XX #{current_session}**\n"
+                f"{choice} {bet_amount:,}\n"
+                f"Số dư sau khi cược: {user['balance']:,}",
+                parse_mode="Markdown"
+            )
+
+            if GROUP_CHAT_ID:
+                try:
+                    await context.bot.send_message(
+                        chat_id=GROUP_CHAT_ID,
+                        text=(
+                            f"🏆 **Đặt thành công phiên XX**\n"
+                            f"**#{current_session}**\n"
+                            f"{choice} `{bet_amount:,}` 🐸 **Ẩn Danh (ID: {user_id})**"
+                        ),
+                        parse_mode="Markdown"
+                    )
+                except Exception:
+                    pass
         return
 
     if text == "📄 Tài khoản":
@@ -620,6 +633,22 @@ async def run_taixiu_loop(application):
             
             target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
             
+            # MỞ PHIÊN: MỞ KHÓA CHAT CHO THÀNH VIÊN TRONG NHÓM
+            if target_chat:
+                try:
+                    await application.bot.set_chat_permissions(
+                        chat_id=target_chat,
+                        permissions=ChatPermissions(
+                            can_send_messages=True,
+                            can_send_media_messages=True,
+                            can_send_polls=True,
+                            can_send_other_messages=True,
+                            can_add_web_page_previews=True
+                        )
+                    )
+                except Exception as e:
+                    logging.error(f"Lỗi mở quyền chat nhóm: {e}")
+
             start_text = (
                 f"🐸 TuanHung88 - TUNG XX 🎲\n"
                 f"🔥 **Xin mời đặt cược phiên XX**\n"
@@ -687,6 +716,22 @@ async def run_taixiu_loop(application):
             await asyncio.sleep(10)
             
             is_betting_open = False  
+
+            # HẾT GIỜ CƯỢC: KHÓA CHAT NHÓM (CẤM NHẮN TIN)
+            if target_chat:
+                try:
+                    await application.bot.set_chat_permissions(
+                        chat_id=target_chat,
+                        permissions=ChatPermissions(
+                            can_send_messages=False,
+                            can_send_media_messages=False,
+                            can_send_polls=False,
+                            can_send_other_messages=False,
+                            can_add_web_page_previews=False
+                        )
+                    )
+                except Exception as e:
+                    logging.error(f"Lỗi khóa quyền chat nhóm: {e}")
 
             if target_chat:
                 try:
@@ -886,6 +931,7 @@ async def run_taixiu_loop(application):
                     pass
             
             current_session += 1
+            await asyncio.sleep(3)
         except Exception as loop_err:
             logging.error(f"Lỗi bên trong vòng lặp Tài Xỉu (đã tự động phục hồi): {loop_err}")
             await asyncio.sleep(5)
