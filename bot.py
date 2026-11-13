@@ -54,7 +54,6 @@ pending_rut = {}
 
 # ID Admin chính thức
 ADMIN_IDS = [8682451039]
-# Đảm bảo đã điền chính xác ID nhóm của bạn vào đây
 GROUP_CHAT_ID = -1004222063034  
 
 # Biến toàn cục quản lý phiên Tài Xỉu
@@ -585,18 +584,31 @@ async def run_taixiu_loop(application):
             is_betting_open = True  
             
             lucky_number = random.randint(0, 99)
-            lucky_reward = random.choice([10000, 20000, 30000, 50000, 70000, 100000])
+            # Thưởng ngẫu nhiên từ 5k đến 50k (chia hết cho 1000)
+            lucky_reward = random.randint(5, 50) * 1000
             
             target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
             
             start_text = (
-                f"🐸 **TuanHung88 - TUNG XX** 🎲\n"
-                f"🔥 **Xin mời đặt cược phiên XX**\n"
-                f"**#{current_session}** 🔥\n\n"
-                f"💲 **Min: 100 | Max mỗi bên: 3.000.000**\n\n"
-                f"🎯 **Cách chơi: [Cửa cược] [số tiền]** (VD: `T 10k`, `T all`)\n"
-                f"🔵 Tài: T | 🔴 Xỉu: X | ⚪ Chẵn: C | ⚫ Lẻ: L"
+                f"ET88 - TUNG XX 🎲\n"
+                f"💥 Hết thời gian đặt cược phiên\n"
+                f"#{current_session}\n"
+                f"🔵 TÀI: {session_bets['T']:,}\n"
+                f"🔴 XỈU: {session_bets['X']:,}\n\n"
+                f"⚪ CHẴN: {session_bets['C']:,}\n"
+                f"⚫ LẺ: {session_bets['L']:,}"
             )
+            # Bản tin mở phiên mới dạng ảnh 1
+            start_msg_text = (
+                f"ET88 - TUNG XX 🎲    Tung Xúc Xắc\n"
+                f"🦸‍♂️ Hết thời gian đặt cược phiên\n"
+                f"#{current_session}\n"
+                f"🔵 TÀI: {session_bets['T']:,}\n"
+                f"🔴 XỈU: {session_bets['X']:,}\n\n"
+                f"⚪ CHẴN: {session_bets['C']:,}\n"
+                f"⚫ LẺ: {session_bets['L']:,}"
+            )
+            
             keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/tuanhung88_bot")]]
             
             if target_chat:
@@ -606,65 +618,30 @@ async def run_taixiu_loop(application):
                     logging.error(f"Lỗi gửi tin nhắn mở phiên: {e}")
             
             await asyncio.sleep(20)
-            if target_chat:
-                try:
-                    await application.bot.send_message(
-                        chat_id=target_chat, 
-                        text=(
-                            f"🐸 **Còn 40 giây phiên #{current_session}**\n"
-                            f"🔵 **TÀI**: {session_bets['T']:,}\n"
-                            f"🔴 **XỈU**: {session_bets['X']:,}\n"
-                            f"⚪ **CHẴN**: {session_bets['C']:,}\n"
-                            f"⚫ **LẺ**: {session_bets['L']:,}"
-                        ), 
-                        parse_mode="Markdown"
-                    )
-                except Exception:
-                    pass
             await asyncio.sleep(20)
-            if target_chat:
-                try:
-                    await application.bot.send_message(
-                        chat_id=target_chat, 
-                        text=(
-                            f"🐸 **Còn 20 giây phiên #{current_session}**\n"
-                            f"🔵 **TÀI**: {session_bets['T']:,}\n"
-                            f"🔴 **XỈU**: {session_bets['X']:,}\n"
-                            f"⚪ **CHẴN**: {session_bets['C']:,}\n"
-                            f"⚫ **LẺ**: {session_bets['L']:,}"
-                        ), 
-                        parse_mode="Markdown"
-                    )
-                except Exception:
-                    pass
             await asyncio.sleep(10)
-            if target_chat:
-                try:
-                    await application.bot.send_message(
-                        chat_id=target_chat, 
-                        text=(
-                            f"🐸 **Còn 10 giây phiên #{current_session}**\n"
-                            f"🔵 **TÀI**: {session_bets['T']:,}\n"
-                            f"🔴 **XỈU**: {session_bets['X']:,}\n"
-                            f"⚪ **CHẴN**: {session_bets['C']:,}\n"
-                            f"⚫ **LẺ**: {session_bets['L']:,}"
-                        ), 
-                        parse_mode="Markdown"
-                    )
-                except Exception:
-                    pass
             await asyncio.sleep(10)
             
             is_betting_open = False  
 
             if target_chat:
                 try:
-                    await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Hết thời gian đặt cược phiên #{current_session}**", parse_mode="Markdown")
-                    await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Bắt đầu tung XX phiên #{current_session}**", parse_mode="Markdown")
+                    # Gửi bảng tổng kết cược khi hết giờ giống hệt ảnh 1
+                    end_bet_text = (
+                        f"ET88 - TUNG XX 🎲    Tung Xúc Xắc\n"
+                        f"🦸‍♂️ **Hết thời gian đặt cược phiên**\n"
+                        f"**#{current_session}**\n"
+                        f"🔵 **TÀI: {session_bets['T']:,}**\n"
+                        f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
+                        f"⚪ **CHẴN: {session_bets['C']:,}**\n"
+                        f"⚫ **LẺ: {session_bets['L']:,}**"
+                    )
+                    await application.bot.send_message(chat_id=target_chat, text=end_bet_text, parse_mode="Markdown")
+                    await application.bot.send_message(chat_id=target_chat, text=f"💥 **Bắt đầu tung XX phiên**\n**#{current_session}**", parse_mode="Markdown")
                 except Exception:
                     pass
             
-            # --- TUNG XÚC XẮC AN TOÀN, BẮT LỖI TRIỆT ĐỂ ---
+            # --- TUNG XÚC XẮC THỰC TẾ TRÊN TELEGRAM ---
             dice_values = []
             current_forced = forced_dice_result  
             forced_dice_result = None  
@@ -679,23 +656,40 @@ async def run_taixiu_loop(application):
                         dice_values.append(val)
                         await asyncio.sleep(0.8)
                     except Exception as e:
-                        logging.error(f"Lỗi khi tung xúc xắc viên lẻ: {e}")
+                        logging.error(f"Lỗi khi tung xúc xắc: {e}")
                         dice_values.append(random.randint(1, 6))
             else:
                 dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
 
-            # Phòng hờ nếu danh sách thiếu phần tử
             while len(dice_values) < 3:
                 dice_values.append(random.randint(1, 6))
 
+            # --- ĐIỀU CHỈNH SỐ XÚC XẮC KHỚP TUYỆT ĐỐI VỚI LỆNH ÉP KẾT QUẢ ---
             tong = sum(dice_values)
             if current_forced == "TAI":
                 if tong < 11:
-                    tong = random.randint(11, 17)
+                    d1 = random.randint(3, 6)
+                    d2 = random.randint(3, 6)
+                    d3 = 11 - d1 - d2
+                    if d3 < 1: d3 = 1
+                    if d3 > 6: d3 = 6
+                    while (d1 + d2 + d3) < 11 or (d1 + d2 + d3) > 17:
+                        d1 = random.randint(3, 6)
+                        d2 = random.randint(3, 6)
+                        d3 = random.randint(3, 6)
+                    dice_values = [d1, d2, d3]
             elif current_forced == "XIU":
                 if tong > 10:
-                    tong = random.randint(4, 10)
+                    d1 = random.randint(1, 3)
+                    d2 = random.randint(1, 3)
+                    d3 = random.randint(1, 4)
+                    while (d1 + d2 + d3) < 4 or (d1 + d2 + d3) > 10:
+                        d1 = random.randint(1, 3)
+                        d2 = random.randint(1, 3)
+                        d3 = random.randint(1, 4)
+                    dice_values = [d1, d2, d3]
 
+            tong = sum(dice_values)
             ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
             ket_qua_cl = "CHẴN" if tong % 2 == 0 else "LẺ"
             
@@ -830,7 +824,7 @@ async def run_taixiu_loop(application):
             current_session += 1
         except Exception as loop_err:
             logging.error(f"Lỗi bên trong vòng lặp Tài Xỉu (đã tự động phục hồi): {loop_err}")
-            await asyncio.sleep(5)  # Chờ 5 giây rồi tự động chạy tiếp phiên sau, không bao giờ chết bot
+            await asyncio.sleep(5)
 
 # --- QUẢN TRỊ ADMIN ---
 async def check_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
