@@ -5,7 +5,7 @@ import json
 import os
 import threading
 from flask import Flask
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 logging.basicConfig(
@@ -599,10 +599,6 @@ async def run_taixiu_loop(application):
         
         if target_chat:
             try:
-                await application.bot.set_chat_permissions(
-                    chat_id=target_chat,
-                    permissions=ChatPermissions(can_send_messages=True)
-                )
                 await application.bot.send_message(chat_id=target_chat, text=start_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard_start))
             except Exception:
                 pass
@@ -661,16 +657,12 @@ async def run_taixiu_loop(application):
 
         if target_chat:
             try:
-                await application.bot.set_chat_permissions(
-                    chat_id=target_chat,
-                    permissions=ChatPermissions(can_send_messages=False)
-                )
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Hết thời gian đặt cược phiên #{current_session}**", parse_mode="Markdown")
                 await application.bot.send_message(chat_id=target_chat, text=f"🤖 **Bắt đầu tung XX phiên #{current_session}**", parse_mode="Markdown")
             except Exception:
                 pass
         
-        # --- TUNG XÚC XẮC AN TOÀN, KHÔNG LỖI, KHÔNG XÓA TIN NHẮN ---
+        # --- TUNG XÚC XẮC TỰ NHIÊN, KHÔNG XÓA TIN NHẮN, ÉP KẾT QUẢ CHUẨN XÁC ---
         dice_values = []
         current_forced = forced_dice_result  
         forced_dice_result = None  
@@ -679,7 +671,6 @@ async def run_taixiu_loop(application):
             for _ in range(3):
                 try:
                     msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                    # Dùng getattr để tránh lỗi nếu đối tượng dice chưa load xong giá trị
                     val = getattr(msg_d.dice, 'value', None)
                     if val is None:
                         val = random.randint(1, 6)
@@ -690,7 +681,7 @@ async def run_taixiu_loop(application):
         else:
             dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
 
-        # Nếu admin chỉnh Tài/Xỉu, quy đổi tổng điểm chuẩn xác
+        # Nếu admin dùng lệnh chỉnh Tài/Xỉu, quy đổi tổng điểm chuẩn xác tuyệt đối
         tong = sum(dice_values)
         if current_forced == "TAI":
             if tong < 11:
