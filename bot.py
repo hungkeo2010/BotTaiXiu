@@ -58,7 +58,7 @@ GROUP_CHAT_ID = -1004222063034
 
 # Biến toàn cục quản lý phiên Tài Xỉu (Bắt đầu từ phiên #200583)
 forced_dice_result = None
-current_session = 200583
+current_session = 200590
 huvang_pool = 295000
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
@@ -670,52 +670,31 @@ async def run_taixiu_loop(application):
             except Exception:
                 pass
         
-        # --- TUNG VÀ XÓA SIÊU TỐC TỪNG VIÊN (KHÔNG DELAY KHI SAI) ---
+        # --- CƠ CHẾ KHÔNG XÓA TIN NHẮN: TUNG ĐỦ 3 VIÊN TỰ NHIÊN, ÉP ĐIỂM SỐ CHUẨN TÀI/XỈU ---
         dice_values = []
         current_forced = forced_dice_result  
         forced_dice_result = None  
 
         if target_chat:
             for _ in range(3):
-                while True:
-                    try:
-                        msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                        val = msg_d.dice.value
-                        
-                        # Kiểm tra từng viên ngay lập tức:
-                        # Ép TÀI -> Chỉ lấy mặt 4, 5, 6 (3 viên >= 12 điểm -> 100% TÀI)
-                        if current_forced == "TAI" and val < 4:
-                            asyncio.create_task(application.bot.delete_message(chat_id=target_chat, message_id=msg_d.message_id))
-                            continue  # Tung lại ngay không cần sleep
-                            
-                        # Ép XỈU -> Chỉ lấy mặt 1, 2, 3 (3 viên <= 9 điểm -> 100% XỈU)
-                        if current_forced == "XIU" and val > 3:
-                            asyncio.create_task(application.bot.delete_message(chat_id=target_chat, message_id=msg_d.message_id))
-                            continue  # Tung lại ngay không cần sleep
-                        
-                        # Khi viên xúc xắc đã chuẩn, mới giữ lại và chờ 0.5s sang viên tiếp theo
-                        dice_values.append(val)
-                        await asyncio.sleep(0.5)
-                        break
-                    except Exception:
-                        if current_forced == "TAI":
-                            dice_values.append(random.randint(4, 6))
-                        elif current_forced == "XIU":
-                            dice_values.append(random.randint(1, 3))
-                        else:
-                            dice_values.append(random.randint(1, 6))
-                        break
+                try:
+                    msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
+                    dice_values.append(msg_d.dice.value)
+                    await asyncio.sleep(0.8)
+                except Exception:
+                    dice_values.append(random.randint(1, 6))
         else:
-            if current_forced == "TAI":
-                dice_values = [random.randint(4, 6) for _ in range(3)]
-            elif current_forced == "XIU":
-                dice_values = [random.randint(1, 3) for _ in range(3)]
-            else:
-                dice_values = [random.randint(1, 6) for _ in range(3)]
+            dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
 
-        dices = tuple(dice_values)
-        tong = sum(dices)
-        
+        # Nếu admin có dùng lệnh chỉnh Tài/Xỉu, tự động quy đổi tổng điểm kết quả cho khớp tuyệt đối 100%
+        tong = sum(dice_values)
+        if current_forced == "TAI":
+            if tong < 11:
+                tong = random.randint(11, 17) # Ép tổng tự động sang Tài (11-17)
+        elif current_forced == "XIU":
+            if tong > 10:
+                tong = random.randint(4, 10)  # Ép tổng tự động sang Xỉu (4-10)
+
         ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
         ket_qua_cl = "CHẴN" if tong % 2 == 0 else "LẺ"
         
