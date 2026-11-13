@@ -147,7 +147,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     parts = text.split()
     if len(parts) == 2 and parts[0].upper() in ["T", "X", "C", "L"]:
         if not is_betting_open:
-            await update.message.reply_text("❌ Đã hết thời gian đặt cược cho phiên này! Vui lòng chờ phiên sau.", parse_mode="Markdown")
+            await update.message.reply_text("❌ **Đã hết thời gian đặt cược cho phiên này! Vui lòng chờ phiên sau.**", parse_mode="Markdown")
             return
 
         choice = parts[0].upper()
@@ -156,16 +156,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user_id in user_session_bets:
             current_user_bets = user_session_bets[user_id]
             if choice == "T" and current_user_bets.get("X", 0) > 0:
-                await update.message.reply_text("❌ Bạn đã đặt cửa XỈU rồi, không thể đặt thêm TÀI trong phiên này!", parse_mode="Markdown")
+                await update.message.reply_text("❌ **Bạn đã đặt cửa XỈU rồi, không thể đặt thêm TÀI trong phiên này!**", parse_mode="Markdown")
                 return
             if choice == "X" and current_user_bets.get("T", 0) > 0:
-                await update.message.reply_text("❌ Bạn đã đặt cửa TÀI rồi, không thể đặt thêm XỈU trong phiên này!", parse_mode="Markdown")
+                await update.message.reply_text("❌ **Bạn đã đặt cửa TÀI rồi, không thể đặt thêm XỈU trong phiên này!**", parse_mode="Markdown")
                 return
             if choice == "C" and current_user_bets.get("L", 0) > 0:
-                await update.message.reply_text("❌ Bạn đã đặt cửa LẺ rồi, không thể đặt thêm CHẴN trong phiên này!", parse_mode="Markdown")
+                await update.message.reply_text("❌ **Bạn đã đặt cửa LẺ rồi, không thể đặt thêm CHẴN trong phiên này!**", parse_mode="Markdown")
                 return
             if choice == "L" and current_user_bets.get("C", 0) > 0:
-                await update.message.reply_text("❌ Bạn đã đặt cửa CHẴN rồi, không thể đặt thêm LẺ trong phiên này!", parse_mode="Markdown")
+                await update.message.reply_text("❌ **Bạn đã đặt cửa CHẴN rồi, không thể đặt thêm LẺ trong phiên này!**", parse_mode="Markdown")
                 return
 
         if amount_str in ["max", "all"]:
@@ -185,23 +185,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
 
         if bet_amount < 100:
-            await update.message.reply_text("❌ Mức cược tối thiểu là `100 VNĐ`!", parse_mode="Markdown")
+            await update.message.reply_text("❌ **Mức cược tối thiểu là `100 VNĐ`!**", parse_mode="Markdown")
             return
             
         if session_bets[choice] >= 3000000:
-            await update.message.reply_text(f"❌ Cửa này đã đạt mức tối đa `3.000.000 VNĐ` (Max 3m). Không nhận thêm cược!", parse_mode="Markdown")
+            await update.message.reply_text(f"❌ **Cửa này đã đạt mức tối đa `3.000.000 VNĐ` (Max 3m). Không nhận thêm cược!**", parse_mode="Markdown")
             return
             
         if session_bets[choice] + bet_amount > 3000000:
             allowed_max = 3000000 - session_bets[choice]
-            await update.message.reply_text(f"❌ Cửa này đã gần đạt mốc 3M! Bạn chỉ có thể đặt tối đa thêm `{allowed_max:,} VNĐ`.", parse_mode="Markdown")
+            await update.message.reply_text(f"❌ **Cửa này đã gần đạt mốc 3M! Bạn chỉ có thể đặt tối đa thêm `{allowed_max:,} VNĐ`.**", parse_mode="Markdown")
             return
 
         if user["is_newbie"] and bet_amount > 10000:
-            await update.message.reply_text("⚠️ Bạn đang là Tân thủ (Giới hạn cược max 10k). Vui lòng nạp tiền hoặc nhờ Admin mở khóa!", parse_mode="Markdown")
+            await update.message.reply_text("⚠️ **Bạn đang là Tân thủ (Giới hạn cược max 10k). Vui lòng nạp tiền hoặc nhờ Admin mở khóa!**", parse_mode="Markdown")
             return
         if user["balance"] < bet_amount:
-            await update.message.reply_text("❌ Số dư tài khoản không đủ để đặt cược số tiền này!", parse_mode="Markdown")
+            await update.message.reply_text("❌ **Số dư tài khoản không đủ để đặt cược số tiền này!**", parse_mode="Markdown")
             return
 
         user["balance"] -= bet_amount
@@ -218,20 +218,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_type = update.message.chat.type
 
         if chat_type in ["group", "supergroup"]:
-            # Cược trực tiếp trong nhóm chat chung -> Hiển thị form ngắn gọn tại nhóm
+            # Cược trực tiếp trong nhóm chat chung -> Giao diện Prem rút gọn tại chỗ
             await update.message.reply_text(
                 f"🌟 **Đặt thành công phiên XX**\n"
                 f"**#{current_session}**\n"
-                f"{choice} {bet_amount:,}\n"
-                f"Số dư sau khi cược: {user['balance']:,}",
+                f"{choice} `{bet_amount:,}đ`\n"
+                f"🪙 Số dư sau khi cược: `{user['balance']:,}đ`",
                 parse_mode="Markdown"
             )
         else:
-            # Cược trong bot (chat riêng) -> Phản hồi riêng cho khách & đẩy thông báo ẩn danh lên nhóm chung
+            # Cược trong bot (chat riêng) -> Phản hồi biên lai cá nhân & đẩy thông báo ẩn danh lên nhóm chung
             await update.message.reply_text(
-                f"🌟 **Đặt thành công phiên XX #{current_session}**\n"
-                f"{choice} {bet_amount:,}\n"
-                f"Số dư sau khi cược: {user['balance']:,}",
+                f"🧾 ─────────────────────────\n"
+                f"🎟️ **BIÊN LAI ĐẶT CƯỢC THÀNH CÔNG**\n"
+                f"🧾 ─────────────────────────\n"
+                f"🆔 Phiên: `#{current_session}`\n"
+                f"🎯 Cửa đặt: **{choice}**\n"
+                f"💵 Tiền cược: `{bet_amount:,} VNĐ`\n"
+                f"🪙 Số dư ví: `{user['balance']:,} VNĐ`\n"
+                f"🧾 ─────────────────────────",
                 parse_mode="Markdown"
             )
 
@@ -633,7 +638,7 @@ async def run_taixiu_loop(application):
             
             target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
             
-            # MỞ PHIÊN: MỞ KHÓA CHAT CHO THÀNH VIÊN TRONG NHÓM
+            # --- MỞ PHIÊN: MỞ KHÓA CHAT CHO THÀNH VIÊN TRONG NHÓM ---
             if target_chat:
                 try:
                     await application.bot.set_chat_permissions(
@@ -650,12 +655,16 @@ async def run_taixiu_loop(application):
                     logging.error(f"Lỗi mở quyền chat nhóm: {e}")
 
             start_text = (
-                f"🐸 TuanHung88 - TUNG XX 🎲\n"
-                f"🔥 **Xin mời đặt cược phiên XX**\n"
-                f"**#{current_session}** 🔥\n\n"
-                f"💲 **Min: 100 | Max mỗi bên: 3.000.000**\n\n"
-                f"🎯 **Cách chơi: Cửa cược số tiền** (VD: `T 10k`, `T all`)\n"
-                f"🔵 Tài: T | 🔴 Xỉu: X | ⚪ Chẵn: C | ⚫ Lẻ: L"
+                f"🎲 ══════════════════════ 🎲\n"
+                f"       ⭐ **TUANHUNG88 - TÀI XỈU MD5** ⭐\n"
+                f"🎲 ══════════════════════ 🎲\n\n"
+                f"🔥 **PHIÊN CƯỢC:** `#{current_session}`\n"
+                f"⏳ Trạng thái: **Đang mở cược (40s)**\n\n"
+                f"💲 **Hạn mức:** Min `100đ` | Max `3.000.000đ`\n\n"
+                f"👉 **Cú pháp cược nhanh tại nhóm:**\n"
+                f"• Cược Tài: `T [số_tiền]` (VD: `T 50k`)\n"
+                f"• Cược Xỉu: `X [số_tiền]` (VD: `X all`)\n"
+                f"• Cược Chẵn/Lẻ: `C [tiền]` / `L [tiền]`"
             )
             keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/tuanhung88_bot")]]
             
@@ -672,10 +681,10 @@ async def run_taixiu_loop(application):
                         chat_id=target_chat, 
                         text=(
                             f"🦸‍♂️ **Còn 40 giây phiên #{current_session}**\n"
-                            f"🔵 **TÀI: {session_bets['T']:,}**\n"
-                            f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
-                            f"⚪ **CHẴN: {session_bets['C']:,}**\n"
-                            f"⚫ **LẺ: {session_bets['L']:,}**"
+                            f"🔵 **TÀI: {session_bets['T']:,}đ**\n"
+                            f"🔴 **XỈU: {session_bets['X']:,}đ**\n\n"
+                            f"⚪ **CHẴN: {session_bets['C']:,}đ**\n"
+                            f"⚫ **LẺ: {session_bets['L']:,}đ**"
                         ), 
                         parse_mode="Markdown"
                     )
@@ -688,10 +697,10 @@ async def run_taixiu_loop(application):
                         chat_id=target_chat, 
                         text=(
                             f"🦸‍♂️ **Còn 20 giây phiên #{current_session}**\n"
-                            f"🔵 **TÀI: {session_bets['T']:,}**\n"
-                            f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
-                            f"⚪ **CHẴN: {session_bets['C']:,}**\n"
-                            f"⚫ **LẺ: {session_bets['L']:,}**"
+                            f"🔵 **TÀI: {session_bets['T']:,}đ**\n"
+                            f"🔴 **XỈU: {session_bets['X']:,}đ**\n\n"
+                            f"⚪ **CHẴN: {session_bets['C']:,}đ**\n"
+                            f"⚫ **LẺ: {session_bets['L']:,}đ**"
                         ), 
                         parse_mode="Markdown"
                     )
@@ -704,10 +713,10 @@ async def run_taixiu_loop(application):
                         chat_id=target_chat, 
                         text=(
                             f"🦸‍♂️ **Còn 10 giây phiên #{current_session}**\n"
-                            f"🔵 **TÀI: {session_bets['T']:,}**\n"
-                            f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
-                            f"⚪ **CHẴN: {session_bets['C']:,}**\n"
-                            f"⚫ **LẺ: {session_bets['L']:,}**"
+                            f"🔵 **TÀI: {session_bets['T']:,}đ**\n"
+                            f"🔴 **XỈU: {session_bets['X']:,}đ**\n\n"
+                            f"⚪ **CHẴN: {session_bets['C']:,}đ**\n"
+                            f"⚫ **LẺ: {session_bets['L']:,}đ**"
                         ), 
                         parse_mode="Markdown"
                     )
@@ -717,7 +726,7 @@ async def run_taixiu_loop(application):
             
             is_betting_open = False  
 
-            # HẾT GIỜ CƯỢC: KHÓA CHAT NHÓM (CẤM NHẮN TIN)
+            # --- HẾT GIỜ CƯỢC: KHÓA CHAT NHÓM (CẤM NHẮN TIN) ---
             if target_chat:
                 try:
                     await application.bot.set_chat_permissions(
@@ -738,10 +747,10 @@ async def run_taixiu_loop(application):
                     end_bet_text = (
                         f"🦸‍♂️ **Hết thời gian đặt cược phiên**\n"
                         f"**#{current_session}**\n"
-                        f"🔵 **TÀI: {session_bets['T']:,}**\n"
-                        f"🔴 **XỈU: {session_bets['X']:,}**\n\n"
-                        f"⚪ **CHẴN: {session_bets['C']:,}**\n"
-                        f"⚫ **LẺ: {session_bets['L']:,}**"
+                        f"🔵 **TÀI: {session_bets['T']:,}đ**\n"
+                        f"🔴 **XỈU: {session_bets['X']:,}đ**\n\n"
+                        f"⚪ **CHẴN: {session_bets['C']:,}đ**\n"
+                        f"⚫ **LẺ: {session_bets['L']:,}đ**"
                     )
                     await application.bot.send_message(chat_id=target_chat, text=end_bet_text, parse_mode="Markdown")
                     await application.bot.send_message(chat_id=target_chat, text=f"💥 **Bắt đầu tung XX phiên**\n**#{current_session}**", parse_mode="Markdown")
@@ -891,18 +900,18 @@ async def run_taixiu_loop(application):
             huvang_pool += random.randint(100, 500)
             
             ket_qua_msg = (
-                f"| **{dice_values[0]} {dice_values[1]} {dice_values[2]}** {icon_tx} **{ket_qua_tx} {ket_qua_cl}** {icon_tx} {icon_cl}\n"
-                f"| {icon_tx} **Tổng điểm xúc xắc: {tong}**\n"
-                f"| (3-18)\n"
-                f"|\n"
-                f"| ｜ **Tổng thắng: {tong_thang:,}**\n"
-                f"| ｜ **Tổng thua: {tong_thua:,}**\n"
-                f"| ｜ **Công hũ: +{random.randint(50, 999)}**\n"
-                f"| ｜ **Hũ hiện tại: {huvang_pool:,}**\n"
-                f"└─────────────────────────\n\n"
-                f"💬 **Thống kê {len(history_sessions)} phiên gần nhất:**\n"
-                f"{row_tx}\n"
-                f"{row_cl}"
+                f"🏆 ══════════════════════ 🏆\n"
+                f"       🎉 **KẾT QUẢ PHIÊN #{current_session}** 🎉\n"
+                f"🏆 ══════════════════════ 🏆\n\n"
+                f"🎲 Xúc xắc: **{dice_values[0]} - {dice_values[1]} - {dice_values[2]}**\n"
+                f"🎯 Tổng điểm: **{tong} ({ket_qua_tx} - {ket_qua_cl})** {icon_tx} {icon_cl}\n\n"
+                f"📊 **Thống kê dòng tiền:**\n"
+                f"• Tổng thắng: `+{tong_thang:,}đ`\n"
+                f"• Tổng thua: `-{tong_thua:,}đ`\n"
+                f"💰 Hũ vàng hiện tại: `{huvang_pool:,}đ`\n\n"
+                f"📈 **Soi cầu 12 phiên gần nhất:**\n"
+                f"`{row_tx}`\n"
+                f"`{row_cl}`"
             )
             
             if target_chat:
@@ -912,7 +921,7 @@ async def run_taixiu_loop(application):
                     ]
                     await application.bot.send_message(
                         chat_id=target_chat,
-                        text=f"🎉 **Kết quả XX phiên #{current_session}**\n\n{ket_qua_msg}",
+                        text=ket_qua_msg,
                         parse_mode="Markdown",
                         reply_markup=InlineKeyboardMarkup(keyboard_kq)
                     )
@@ -998,7 +1007,7 @@ async def mo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"✅ Đã mở khóa thành công! User ID `{target_id}` không còn là tân thủ (Đã bỏ giới hạn cược max 10k).", parse_mode="Markdown")
     try:
-        await context.bot.send_message(chat_id=target_id, text="🎉 Tài khoản của bạn đã được Admin mở khóa! Bạn có thể đặt cược hạn mức cao hơn.", parse_mode="Markdown")
+        await context.bot.send_message(chat_id=target_id, text="🎉 **Tài khoản của bạn đã được Admin mở khóa! Bạn có thể đặt cược hạn mức cao hơn.**", parse_mode="Markdown")
     except Exception:
         pass
 
