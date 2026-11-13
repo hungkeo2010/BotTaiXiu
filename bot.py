@@ -59,9 +59,9 @@ ADMIN_IDS = [8682451039]
 # --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
 GROUP_CHAT_ID = -1004222063034  
 
-# Biến toàn cục quản lý phiên Tài Xỉu
+# Biến toàn cục quản lý phiên Tài Xỉu (Bắt đầu từ phiên #200583)
 forced_dice_result = None
-current_session = 200000
+current_session = 200583
 huvang_pool = 295000
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
 user_session_bets = {}  
@@ -77,12 +77,12 @@ def get_user(user_id):
     if user_id not in users_db:
         users_db[user_id] = {
             "balance": 0,
-            "total_bet": 0,             # Tổng cược tích lũy từ trước đến nay
-            "required_turnover": 0,     # Tổng cược yêu cầu để được rút tiền
+            "total_bet": 0,             # Tổng cược tích lũy
+            "required_turnover": 0,     # Tổng cược yêu cầu để rút tiền
             "vip_points": 0,
             "vip_level": "Đồng 🥉",
             "is_newbie": True,  
-            "has_received_x2": False,   # Theo dõi nạp X2 lần đầu
+            "has_received_x2": False,   # Trạng thái nạp X2 lần đầu
             "bank_info": None,  
             "history_nap": [],
             "history_rut": [],
@@ -156,7 +156,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         choice = parts[0].upper()
         amount_str = parts[1].lower()
 
-        # Kiểm tra ràng buộc cửa cược (Tài k được đặt Xỉu, Chẵn k được đặt Lẻ)
+        # Kiểm tra ràng buộc cửa cược
         if user_id in user_session_bets:
             current_user_bets = user_session_bets[user_id]
             if choice == "T" and current_user_bets.get("X", 0) > 0:
@@ -441,7 +441,7 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Số dư tài khoản không đủ để rút số tiền này!")
         return
 
-    # --- KIỂM TRA ĐIỀU KIỆN VÒNG CƯỢC (TURNOVER) ---
+    # Kiểm tra vòng cược
     if user["total_bet"] < user["required_turnover"]:
         con_thieu = user["required_turnover"] - user["total_bet"]
         await update.message.reply_text(
@@ -459,6 +459,23 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ma_rut = str(random.randint(100000, 999999))
     pending_rut[ma_rut] = {"user_id": user_id, "amount": rut_tien}
     
+    # --- THÔNG BÁO TẠO LỆNH RÚT TIỀN LÊN NHÓM ---
+    if GROUP_CHAT_ID:
+        try:
+            await context.bot.send_message(
+                chat_id=GROUP_CHAT_ID,
+                text=(
+                    f"💳 **THÔNG BÁO TẠO LỆNH RÚT TIỀN**\n"
+                    f"👤 Khách ID: `{user_id}`\n"
+                    f"💸 Số tiền rút: `{rut_tien:,}đ`\n"
+                    f"🏦 Ngân hàng: `{user['bank_info']}`\n"
+                    f"📌 Mã GD: `#{ma_rut}`"
+                ),
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
+
     for admin_id in ADMIN_IDS:
         try:
             await context.bot.send_message(
@@ -805,6 +822,38 @@ async def run_taixiu_loop(application):
         current_session += 1
 
 # --- QUẢN TRỊ ADMIN ---
+async def check_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    args = context.args
+    if not args:
+        await update.message.reply_text("⚠️ Dùng: `/check [ID_user]`", parse_mode="Markdown")
+        return
+    try:
+        target_id = int(args[0])
+    except ValueError:
+        await update.message.reply_text("❌ ID không hợp lệ!")
+        return
+
+    if target_id not in users_db:
+        await update.message.reply_text(f"❌ Không tìm thấy thông tin của user ID `{target_id}`.", parse_mode="Markdown")
+        return
+
+    u = users_db[target_id]
+    update_vip(u)
+    
+    info_str = (
+        f"🔍 **THÔNG TIN KHÁCH CHƠI (ID: {target_id})**\n\n"
+        f"🪙 Số dư: `{u['balance']:,} VNĐ`\n"
+        f"📊 Tổng cược tích lũy: `{u['total_bet']:,} VNĐ`\n"
+        f"🎯 Vòng cược yêu cầu: `{u['required_turnover']:,} VNĐ`\n"
+        f"👑 Cấp VIP: `{u['vip_level']}` (Điểm: {u['vip_points']})\n"
+        f"🎁 Đã nhận X2 lần đầu: `{'Rồi ✅' if u.get('has_received_x2') else 'Chưa ❌'}`\n"
+        f"🏦 Ngân hàng: `{u['bank_info'] if u['bank_info'] else 'Chưa cài'}`\n"
+        f"🔰 Trạng thái: `{'Tân thủ' if u['is_newbie'] else 'Chính thức'}`"
+    )
+    await update.message.reply_text(info_str, parse_mode="Markdown")
+
 async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
@@ -814,24 +863,22 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ma_gd = args[0]
     if ma_gd in pending_nap:
         info = pending_nap[ma_gd]
-        u = get_user(info["user_id"])
+        user_id = info["user_id"]
+        u = get_user(user_id)
         u["is_newbie"] = False
         
-        # --- HỆ THỐNG VÒNG CƯỢC & NẠP X2 ---
         so_tien_nap = info["amount"]
         thuc_nhan = so_tien_nap
         x2_msg = ""
         
         if not u.get("has_received_x2", False):
-            # Nạp lần đầu: X2 số tiền nạp và yêu cầu vòng cược x4 tổng tiền nạp x2
             thuc_nhan = so_tien_nap * 2
             u["has_received_x2"] = True
-            vong_cuoc = (so_tien_nap * 2) * 4  # (Tiền nhận x2) nhân x4 vòng
+            vong_cuoc = (so_tien_nap * 2) * 4  # Nạp đầu x2 tiền và cược x4 mới được rút
             u["required_turnover"] += vong_cuoc
             x2_msg = f"\n🎁 **Khuyến mãi X2:** Nhận `{thuc_nhan:,}đ` | Yêu cầu cược x4 (`{vong_cuoc:,}đ`) để rút!"
         else:
-            # Nạp từ lần 2 trở đi: Không nhân x2, yêu cầu vòng cược x2 số tiền nạp
-            vong_cuoc = so_tien_nap * 2
+            vong_cuoc = so_tien_nap * 2  # Nạp từ lần 2 cược x2
             u["required_turnover"] += vong_cuoc
             x2_msg = f"\n📌 **Nạp từ lần 2:** Yêu cầu cược x2 (`{vong_cuoc:,}đ`) để rút!"
 
@@ -840,9 +887,25 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_data()
         del pending_nap[ma_gd]
         
+        # --- THÔNG BÁO NẠP THÀNH CÔNG LÊN NHÓM ---
+        if GROUP_CHAT_ID:
+            try:
+                await context.bot.send_message(
+                    chat_id=GROUP_CHAT_ID,
+                    text=(
+                        f"✅ **THÔNG BÁO NẠP TIỀN THÀNH CÔNG**\n"
+                        f"👤 Khách ID: `{user_id}`\n"
+                        f"💵 Số tiền nạp: `{so_tien_nap:,}đ`\n"
+                        f"💰 Thực nhận: `{thuc_nhan:,}đ`"
+                    ),
+                    parse_mode="Markdown"
+                )
+            except Exception:
+                pass
+
         try:
             await context.bot.send_message(
-                chat_id=info["user_id"], 
+                chat_id=user_id, 
                 text=f"✅ **NẠP THÀNH CÔNG!**\nCộng `+{thuc_nhan:,}đ`{x2_msg}\n🪙 Số dư mới: `{u['balance']:,}đ`", 
                 parse_mode="Markdown"
             )
@@ -1035,6 +1098,23 @@ async def code_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user["balance"] += val
         save_data()
         del giftcode_db[code]
+        
+        # --- THÔNG BÁO NHẬP CODE THÀNH CÔNG LÊN NHÓM ---
+        if GROUP_CHAT_ID:
+            try:
+                await context.bot.send_message(
+                    chat_id=GROUP_CHAT_ID,
+                    text=(
+                        f"🎁 **THÔNG BÁO NHẬP GIFTCODE**\n"
+                        f"👤 Khách ID: `{user_id}`\n"
+                        f"🎫 Mã code: `{code}`\n"
+                        f"💰 Giá trị nhận: `{val:,}đ`"
+                    ),
+                    parse_mode="Markdown"
+                )
+            except Exception:
+                pass
+
         await update.message.reply_text(f"🎉 **NHẬP CODE THÀNH CÔNG!**\n🎁 Nhận: `+{val:,} VNĐ`", parse_mode="Markdown")
     else:
         await update.message.reply_text("❌ Mã code không tồn tại hoặc đã được sử dụng!")
@@ -1110,6 +1190,7 @@ async def main():
     application.add_handler(CommandHandler("sodu", sodu_command))
     application.add_handler(CommandHandler("caidatbank", caidatbank_command))
     application.add_handler(CommandHandler("rut", rut_command))
+    application.add_handler(CommandHandler("check", check_user_command))  # Lệnh tra cứu khách chơi qua ID
     application.add_handler(CommandHandler("duyet", duyet_command))
     application.add_handler(CommandHandler("tuchoi", tuchoi_command))
     application.add_handler(CommandHandler("duyetrut", duyetrut_command))
