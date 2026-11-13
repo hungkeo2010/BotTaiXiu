@@ -24,7 +24,6 @@ def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# Khởi chạy web server ở luồng phụ (background thread) độc lập tuyệt đối với bot
 threading.Thread(target=run_web_server, daemon=True).start()
 
 # --- QUẢN LÝ DỮ LIỆU BỀN VỮNG (LƯU RA FILE JSON) ---
@@ -55,8 +54,6 @@ pending_rut = {}
 
 # ID Admin chính thức
 ADMIN_IDS = [8682451039]
-
-# --- QUAN TRỌNG: ĐIỀN CHAT ID CỦA NHÓM VÀO ĐÂY (VD: -1001234567890) ---
 GROUP_CHAT_ID = -1004222063034  
 
 # Biến toàn cục quản lý phiên Tài Xỉu (Bắt đầu từ phiên #200583)
@@ -77,12 +74,12 @@ def get_user(user_id):
     if user_id not in users_db:
         users_db[user_id] = {
             "balance": 0,
-            "total_bet": 0,             # Tổng cược tích lũy
-            "required_turnover": 0,     # Tổng cược yêu cầu để rút tiền
+            "total_bet": 0,
+            "required_turnover": 0,
             "vip_points": 0,
             "vip_level": "Đồng 🥉",
             "is_newbie": True,  
-            "has_received_x2": False,   # Trạng thái nạp X2 lần đầu
+            "has_received_x2": False,
             "bank_info": None,  
             "history_nap": [],
             "history_rut": [],
@@ -156,7 +153,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         choice = parts[0].upper()
         amount_str = parts[1].lower()
 
-        # Kiểm tra ràng buộc cửa cược
         if user_id in user_session_bets:
             current_user_bets = user_session_bets[user_id]
             if choice == "T" and current_user_bets.get("X", 0) > 0:
@@ -441,7 +437,6 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Số dư tài khoản không đủ để rút số tiền này!")
         return
 
-    # Kiểm tra vòng cược
     if user["total_bet"] < user["required_turnover"]:
         con_thieu = user["required_turnover"] - user["total_bet"]
         await update.message.reply_text(
@@ -459,7 +454,6 @@ async def rut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ma_rut = str(random.randint(100000, 999999))
     pending_rut[ma_rut] = {"user_id": user_id, "amount": rut_tien}
     
-    # --- THÔNG BÁO TẠO LỆNH RÚT TIỀN LÊN NHÓM ---
     if GROUP_CHAT_ID:
         try:
             await context.bot.send_message(
@@ -515,8 +509,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
 
         noi_dung_ck = f"NAP{user_id}{magd}"
+        # ĐÃ XÓA ẢNH QR, CHỈ GIỮ LẠI THÔNG TIN VĂN BẢN
         caption_text = (
-            f"🟩 **Quét mã nạp tiền**\n\n"
+            f"🟩 **THÔNG TIN NẠP TIỀN**\n\n"
             f"🆔 ID: `{user_id}`\n"
             f"🪙 Ví TK: `{get_user(user_id)['balance']:,}`\n\n"
             f"Số tiền nạp: **{amount:,} VNĐ**\n"
@@ -530,19 +525,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Mã đơn: `DP{random.randint(10000000000000, 99999999999999)}`\n"
             f"Đơn sẽ hết hạn sau **10 phút**, vui lòng thanh toán trong thời gian này."
         )
-        qr_photo_url = "https://i.imgur.com/your_qr_image.jpg" # Thay link ảnh QR của bạn vào đây
-
-        try:
-            await query.message.reply_photo(
-                photo=qr_photo_url,
-                caption=caption_text,
-                parse_mode="Markdown"
-            )
-        except Exception:
-            await query.message.reply_text(
-                caption_text,
-                parse_mode="Markdown"
-            )
+        await query.message.reply_text(caption_text, parse_mode="Markdown")
 
     elif data == "ls_nap":
         u = get_user(user_id)
@@ -574,8 +557,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pending_nap[str(magd)] = {"user_id": user_id, "amount": 50000}
         
         noi_dung_ck = f"NAP{user_id}{magd}"
+        # ĐÃ XÓA ẢNH QR, CHỈ GIỮ LẠI THÔNG TIN VĂN BẢN
         caption_text = (
-            f"🟩 **Quét mã nạp tiền**\n\n"
+            f"🟩 **THÔNG TIN NẠP TIỀN**\n\n"
             f"🆔 ID: `{user_id}`\n"
             f"🪙 Ví TK: `{get_user(user_id)['balance']:,}`\n\n"
             f"Số tiền nạp: **50,000 VNĐ**\n"
@@ -589,19 +573,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Mã đơn: `DP{random.randint(10000000000000, 99999999999999)}`\n"
             f"Đơn sẽ hết hạn sau **10 phút**, vui lòng thanh toán trong thời gian này."
         )
-        qr_photo_url = "https://i.imgur.com/your_qr_image.jpg"
-        
-        try:
-            await query.message.reply_photo(
-                photo=qr_photo_url,
-                caption=caption_text,
-                parse_mode="Markdown"
-            )
-        except Exception:
-            await query.message.reply_text(
-                caption_text,
-                parse_mode="Markdown"
-            )
+        await query.message.reply_text(caption_text, parse_mode="Markdown")
 
 async def run_taixiu_loop(application):
     global current_session, session_bets, user_session_bets, user_session_total_bet, huvang_pool, forced_dice_result, history_sessions, is_betting_open, lucky_number, lucky_reward
@@ -700,47 +672,56 @@ async def run_taixiu_loop(application):
             except Exception:
                 pass
         
+        # --- CƠ CHẾ TUNG XÚC XẮC THẬT CỦA TELEGRAM ĐẢM BẢO KHỚP 100% KẾT QUẢ ĐÃ CHỈNH ---
         dice_values = []
-        if forced_dice_result == "TAI":
-            dice_values = [5, 5, 3]  
-            forced_dice_result = None
-            if target_chat:
-                for _ in range(3):
-                    try:
-                        await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                        await asyncio.sleep(0.8)
-                    except Exception:
-                        pass
-        elif forced_dice_result == "XIU":
-            dice_values = [2, 2, 3]  
-            forced_dice_result = None
-            if target_chat:
-                for _ in range(3):
-                    try:
-                        await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                        await asyncio.sleep(0.8)
-                    except Exception:
-                        pass
-        else:
-            if target_chat:
-                for _ in range(3):
+        current_forced = forced_dice_result  
+        forced_dice_result = None  
+
+        if target_chat:
+            for _ in range(3):
+                while True:
                     try:
                         msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                        dice_values.append(msg_d.dice.value)
+                        val = msg_d.dice.value
+                        dice_values.append(val)
                         await asyncio.sleep(0.8)
+                        break
                     except Exception:
                         dice_values.append(random.randint(1, 6))
+                        break
+            
+            if current_forced:
+                while True:
+                    tong_thu_nghiem = sum(dice_values)
+                    is_tai = tong_thu_nghiem >= 11
+                    
+                    if (current_forced == "TAI" and is_tai) or (current_forced == "XIU" and not is_tai):
+                        break  
+                    
+                    dice_values = []
+                    for _ in range(3):
+                        try:
+                            msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
+                            dice_values.append(msg_d.dice.value)
+                            await asyncio.sleep(0.8)
+                        except Exception:
+                            dice_values.append(random.randint(1, 6))
+        else:
+            if current_forced == "TAI":
+                dice_values = [5, 4, 3]
+            elif current_forced == "XIU":
+                dice_values = [2, 2, 3]
             else:
                 dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
-        
+
         dices = tuple(dice_values)
         tong = sum(dices)
         
         ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
-        ket_qua_cl = "CHẮN" if tong % 2 == 0 else "LẺ"
+        ket_qua_cl = "CHẴN" if tong % 2 == 0 else "LẺ"
         
         icon_tx = "🔵" if ket_qua_tx == "TÀI" else "🔴"
-        icon_cl = "⚪" if ket_qua_cl == "CHẮN" else "⚫"
+        icon_cl = "⚪" if ket_qua_cl == "CHẴN" else "⚫"
         
         history_sessions.append((icon_tx, icon_cl))
         if len(history_sessions) > 12:
@@ -790,7 +771,7 @@ async def run_taixiu_loop(application):
                         pass
 
             if bets["C"] > 0:
-                if ket_qua_cl == "CHẮN":
+                if ket_qua_cl == "CHẴN":
                     thuong = int(bets["C"] * 1.95)
                     thang_user += thuong
                     u["balance"] += thuong
@@ -922,11 +903,11 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not u.get("has_received_x2", False):
             thuc_nhan = so_tien_nap * 2
             u["has_received_x2"] = True
-            vong_cuoc = (so_tien_nap * 2) * 4  # Nạp đầu x2 tiền và cược x4 mới được rút
+            vong_cuoc = (so_tien_nap * 2) * 4  
             u["required_turnover"] += vong_cuoc
             x2_msg = f"\n🎁 **Khuyến mãi X2:** Nhận `{thuc_nhan:,}đ` | Yêu cầu cược x4 (`{vong_cuoc:,}đ`) để rút!"
         else:
-            vong_cuoc = so_tien_nap * 2  # Nạp từ lần 2 cược x2
+            vong_cuoc = so_tien_nap * 2  
             u["required_turnover"] += vong_cuoc
             x2_msg = f"\n📌 **Nạp từ lần 2:** Yêu cầu cược x2 (`{vong_cuoc:,}đ`) để rút!"
 
@@ -935,7 +916,6 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_data()
         del pending_nap[ma_gd]
         
-        # --- THÔNG BÁO NẠP THÀNH CÔNG LÊN NHÓM ---
         if GROUP_CHAT_ID:
             try:
                 await context.bot.send_message(
@@ -1074,7 +1054,7 @@ async def thutien_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👤 ID: `{target_user_id}`\n"
         f"💸 Biến động: `{amount:+,}đ`\n"
         f"🪙 Số dư mới: `{target_user['balance']:,}đ`",
-        parse_mode="Markdown"
+        parse_Mode="Markdown"
     )
 
     try:
@@ -1147,7 +1127,6 @@ async def code_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_data()
         del giftcode_db[code]
         
-        # --- THÔNG BÁO NHẬP CODE THÀNH CÔNG LÊN NHÓM ---
         if GROUP_CHAT_ID:
             try:
                 await context.bot.send_message(
@@ -1226,7 +1205,6 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         forced_dice_result = None
         await update.message.reply_text("🔄 Đã reset xúc xắc ngẫu nhiên.")
 
-# --- KHỞI CHẠY CHÍNH BẢO VỆ CHỐNG LẶP (LOCK FLAG) ---
 TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
 
 async def main():
@@ -1238,7 +1216,7 @@ async def main():
     application.add_handler(CommandHandler("sodu", sodu_command))
     application.add_handler(CommandHandler("caidatbank", caidatbank_command))
     application.add_handler(CommandHandler("rut", rut_command))
-    application.add_handler(CommandHandler("check", check_user_command))  # Lệnh tra cứu khách chơi qua ID
+    application.add_handler(CommandHandler("check", check_user_command))
     application.add_handler(CommandHandler("duyet", duyet_command))
     application.add_handler(CommandHandler("tuchoi", tuchoi_command))
     application.add_handler(CommandHandler("duyetrut", duyetrut_command))
