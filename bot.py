@@ -218,7 +218,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_type = update.message.chat.type
 
         if chat_type in ["group", "supergroup"]:
-            # Cược trực tiếp trong nhóm chat chung -> Hiển thị form ngắn gọn tại nhóm
             await update.message.reply_text(
                 f"🌟 **Đặt thành công phiên XX**\n"
                 f"**#{current_session}**\n"
@@ -227,7 +226,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 parse_mode="Markdown"
             )
         else:
-            # Cược trong bot (chat riêng) -> Phản hồi riêng cho khách & đẩy thông báo ẩn danh lên nhóm chung
             await update.message.reply_text(
                 f"🌟 **Đặt thành công phiên XX #{current_session}**\n"
                 f"{choice} {bet_amount:,}\n"
@@ -358,7 +356,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• `/caidatbank [stk] [mã_bank] [tên]` — Cài STK\n"
             "• `/chuyen [uid] [tiền]` — Chuyển tiền nội bộ\n"
             "• `/check [ID]` — Tra cứu thông tin người chơi (Admin)\n"
-            "• `/mo [ID]` — Mở khóa Tân thủ cho người chơi (Admin)"
+            "• `/mo [ID]` — Mở khóa Tân thủ cho người chơi (Admin)\n"
+            "• `/congvongcuoc [ID] [số_vòng]` — Cộng vòng cược yêu cầu cho người chơi (Admin)\n"
+            "• `/chinhxucxac [tai/xiu/reset]` — Ép kết quả xúc xắc phiên tiếp theo (Admin)"
         )
         await update.message.reply_text(help_text, parse_mode="Markdown")
 
@@ -633,7 +633,7 @@ async def run_taixiu_loop(application):
             
             target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
             
-            # MỞ PHIÊN: MỞ KHÓA CHAT CHO THÀNH VIÊN TRONG NHÓM
+            # --- MỞ PHIÊN: MỞ KHÓA CHAT CHO THÀNH VIÊN TRONG NHÓM ---
             if target_chat:
                 try:
                     await application.bot.set_chat_permissions(
@@ -717,7 +717,7 @@ async def run_taixiu_loop(application):
             
             is_betting_open = False  
 
-            # HẾT GIỜ CƯỢC: KHÓA CHAT NHÓM (CẤM NHẮN TIN)
+            # --- HẾT GIỜ CƯỢC: KHÓA CHAT NHÓM (CẤM NHẮN TIN) ---
             if target_chat:
                 try:
                     await application.bot.set_chat_permissions(
@@ -752,43 +752,37 @@ async def run_taixiu_loop(application):
             current_forced = forced_dice_result  
             forced_dice_result = None  
 
-            if target_chat:
-                for _ in range(3):
-                    try:
-                        msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                        val = getattr(msg_d.dice, 'value', None)
-                        if val is None:
-                            val = random.randint(1, 6)
-                        dice_values.append(val)
-                        await asyncio.sleep(0.8)
-                    except Exception as e:
-                        logging.error(f"Lỗi khi tung xúc xắc: {e}")
-                        dice_values.append(random.randint(1, 6))
+            # SỬA LỖI CHỈNH XÚC XẮC: Ép kết quả chuẩn xác 100% trước khi tính toán
+            if current_forced == "TAI":
+                while True:
+                    d1, d2, d3 = random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)
+                    if (d1 + d2 + d3) >= 11:
+                        dice_values = [d1, d2, d3]
+                        break
+            elif current_forced == "XIU":
+                while True:
+                    d1, d2, d3 = random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)
+                    if (d1 + d2 + d3) <= 10:
+                        dice_values = [d1, d2, d3]
+                        break
             else:
-                dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
+                if target_chat:
+                    for _ in range(3):
+                        try:
+                            msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
+                            val = getattr(msg_d.dice, 'value', None)
+                            if val is None:
+                                val = random.randint(1, 6)
+                            dice_values.append(val)
+                            await asyncio.sleep(0.8)
+                        except Exception as e:
+                            logging.error(f"Lỗi khi tung xúc xắc: {e}")
+                            dice_values.append(random.randint(1, 6))
+                else:
+                    dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
 
             while len(dice_values) < 3:
                 dice_values.append(random.randint(1, 6))
-
-            tong = sum(dice_values)
-            if current_forced == "TAI":
-                if tong < 11:
-                    while True:
-                        d1 = random.randint(1, 6)
-                        d2 = random.randint(1, 6)
-                        d3 = random.randint(1, 6)
-                        if 11 <= (d1 + d2 + d3) <= 17:
-                            dice_values = [d1, d2, d3]
-                            break
-            elif current_forced == "XIU":
-                if tong > 10:
-                    while True:
-                        d1 = random.randint(1, 6)
-                        d2 = random.randint(1, 6)
-                        d3 = random.randint(1, 6)
-                        if 4 <= (d1 + d2 + d3) <= 10:
-                            dice_values = [d1, d2, d3]
-                            break
 
             tong = sum(dice_values)
             ket_qua_tx = "TÀI" if tong >= 11 else "XỈU"
@@ -1001,6 +995,27 @@ async def mo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=target_id, text="🎉 Tài khoản của bạn đã được Admin mở khóa! Bạn có thể đặt cược hạn mức cao hơn.", parse_mode="Markdown")
     except Exception:
         pass
+
+# Lệnh mới: Cộng vòng cược cho người chơi (Admin)
+async def congvongcuoc_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    args = context.args
+    if len(args) < 2:
+        await update.message.reply_text("⚠️ Dùng: `/congvongcuoc [ID_user] [số_vòng_cần_cộng]`", parse_mode="Markdown")
+        return
+    try:
+        target_id = int(args[0])
+        vong_them = int(args[1])
+    except ValueError:
+        await update.message.reply_text("❌ ID hoặc số vòng cược phải là số nguyên!")
+        return
+
+    u = get_user(target_id)
+    u["required_turnover"] += vong_them
+    save_data()
+
+    await update.message.reply_text(f"✅ Đã cộng thêm vòng cược cho user `{target_id}` thành công!\n📊 Tổng yêu cầu cược hiện tại: `{u['required_turnover']:,}đ`", parse_mode="Markdown")
 
 async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
@@ -1337,6 +1352,7 @@ async def main():
     application.add_handler(CommandHandler("rut", rut_command))
     application.add_handler(CommandHandler("check", check_user_command))
     application.add_handler(CommandHandler("mo", mo_command))
+    application.add_handler(CommandHandler("congvongcuoc", congvongcuoc_command))
     application.add_handler(CommandHandler("duyet", duyet_command))
     application.add_handler(CommandHandler("tuchoi", tuchoi_command))
     application.add_handler(CommandHandler("duyetrut", duyetrut_command))
