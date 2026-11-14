@@ -341,6 +341,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🎁 Nhận code miễn phí mỗi ngày tại kênh thông báo sự kiện.")
 
     elif text == "🔍 Lệnh":
+        # Đã lược bỏ hoàn toàn các lệnh Admin ra khỏi giao diện hiển thị cho người chơi thường
         help_text = (
             "📜 **DANH SÁCH LỆNH**\n\n"
             "🎲 **Game Tài Xỉu:**\n"
@@ -354,11 +355,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• `/rut [tiền]` hoặc `/rut all` — Rút tiền (Min 100k - Max 10M)\n"
             "• `/lsnap`, `/lsrut`, `/lschoi` — Lịch sử\n"
             "• `/caidatbank [stk] [mã_bank] [tên]` — Cài STK\n"
-            "• `/chuyen [uid] [tiền]` — Chuyển tiền nội bộ\n"
-            "• `/check [ID]` — Tra cứu thông tin người chơi (Admin)\n"
-            "• `/mo [ID]` — Mở khóa Tân thủ cho người chơi (Admin)\n"
-            "• `/congvongcuoc [ID] [số_vòng]` — Cộng vòng cược yêu cầu cho người chơi (Admin)\n"
-            "• `/chinhxucxac [tai/xiu/reset]` — Ép kết quả xúc xắc phiên tiếp theo (Admin)"
+            "• `/chuyen [uid] [tiền]` — Chuyển tiền nội bộ"
         )
         await update.message.reply_text(help_text, parse_mode="Markdown")
 
@@ -633,7 +630,7 @@ async def run_taixiu_loop(application):
             
             target_chat = GROUP_CHAT_ID if GROUP_CHAT_ID else None
             
-            # --- MỞ PHIÊN: MỞ KHÓA CHAT CHO THÀNH VIÊN TRONG NHÓM ---
+            # MỞ PHIÊN: MỞ KHÓA CHAT CHO THÀNH VIÊN TRONG NHÓM
             if target_chat:
                 try:
                     await application.bot.set_chat_permissions(
@@ -717,7 +714,7 @@ async def run_taixiu_loop(application):
             
             is_betting_open = False  
 
-            # --- HẾT GIỜ CƯỢC: KHÓA CHAT NHÓM (CẤM NHẮN TIN) ---
+            # HẾT GIỜ CƯỢC: KHÓA CHAT NHÓM (CẤM NHẮN TIN)
             if target_chat:
                 try:
                     await application.bot.set_chat_permissions(
@@ -752,7 +749,7 @@ async def run_taixiu_loop(application):
             current_forced = forced_dice_result  
             forced_dice_result = None  
 
-            # SỬA LỖI CHỈNH XÚC XẮC: Ép kết quả chuẩn xác 100% trước khi tính toán
+            # SỬA LỖI CHỈNH XÚC XẮC: Ép kết quả chuẩn xác 100%
             if current_forced == "TAI":
                 while True:
                     d1, d2, d3 = random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)
@@ -996,7 +993,6 @@ async def mo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         pass
 
-# Lệnh mới: Cộng vòng cược cho người chơi (Admin)
 async def congvongcuoc_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
