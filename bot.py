@@ -1,11 +1,11 @@
-import logging
+Import logging
 import random
 import asyncio
 import json
 import os
 import threading
-from flask import Flask, render_template
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions, WebAppInfo
+from flask import Flask
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 logging.basicConfig(
@@ -13,17 +13,12 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# --- TẠO WEB SERVER BẰNG FLASK ĐỂ UPTIMEROBOT NHẬN DIỆN 200 OK & HOST MINI APP ---
+# --- TẠO WEB SERVER BẰNG FLASK ĐỂ UPTIMEROBOT NHẬN DIỆN 200 OK ---
 app = Flask(__name__)
 
 @app.route('/')
 def health_check():
     return "Bot is alive and running 24/7!", 200
-
-@app.route('/taixiu')
-def taixiu_miniapp():
-    # Phục vụ giao diện Mini App bàn nặn Tài Xỉu MD5 (file taixiu.html phải nằm trong thư mục templates)
-    return render_template('taixiu.html')
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
@@ -305,8 +300,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif text == "📁 Danh sách game":
         game_text = (
-            "🎮 **DANH SÁCH TRÒ CHƠI TUANHUNG88**\n"
-            "Vô nhóm chat chính: https://t.me/tuanhung88chat\n\n"
+            "🎮 **DANH SÁCH TRÒ CHƠI**\n"
+            "Vô nhóm chơi: https://t.me/tuanhung88chat\n\n"
             "- **T**: Tổng 3 viên XX từ 11 - 18 Tài.\n"
             "- **X**: Tổng 3 viên XX từ 3 - 10 Xỉu.\n"
             "- **C**: Tổng 3 viên XX là Chẵn.\n"
@@ -315,9 +310,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "- T/X/C/L: x1.95\n"
             "👉 Tối thiểu 100 và tối đa mỗi bên 3.000.000"
         )
-        # Tích hợp nút mở Mini App bàn Tài Xỉu MD5 (Thay đường dẫn render của bạn vào url)
         keyboard = [
-            [InlineKeyboardButton("🎲 Mở Bàn Tài Xỉu MD5 (Mini App)", web_app=WebAppInfo(url="https://bottaixiu.onrender.com/taixiu"))],
             [InlineKeyboardButton("🔗 Tài Xỉu Room", url="https://t.me/tuanhung88chat")]
         ]
         await update.message.reply_text(game_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
@@ -348,7 +341,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🎁 Nhận code miễn phí mỗi ngày tại kênh thông báo sự kiện.")
 
     elif text == "🔍 Lệnh":
-        # Đã ẩn hoàn toàn các lệnh admin khỏi danh sách hiển thị cho người chơi thường
+        # Đã lược bỏ hoàn toàn các lệnh Admin ra khỏi giao diện hiển thị cho người chơi thường
         help_text = (
             "📜 **DANH SÁCH LỆNH**\n\n"
             "🎲 **Game Tài Xỉu:**\n"
@@ -584,7 +577,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_data()
         await query.message.reply_text(f"🎁 Nhận hoàn cược: `+{t:,}đ`", parse_mode="Markdown")
     elif data == "ho_tro":
-        await query.message.reply_text("🎧 Hỗ trợ 24/7 qua Room: https://t.me/tuanhung88chat")
+        await query.message.reply_text("🎧 Hỗ trợ 24/7.")
     elif data == "nap_nganhang":
         magd = random.randint(100000, 999999)
         pending_nap[str(magd)] = {"user_id": user_id, "amount": 50000}
@@ -661,10 +654,7 @@ async def run_taixiu_loop(application):
                 f"🎯 **Cách chơi: Cửa cược số tiền** (VD: `T 10k`, `T all`)\n"
                 f"🔵 Tài: T | 🔴 Xỉu: X | ⚪ Chẵn: C | ⚫ Lẻ: L"
             )
-            keyboard_start = [
-                [InlineKeyboardButton("🎲 Mở Bàn Tài Xỉu MD5 (Mini App)", web_app=WebAppInfo(url="https://bottaixiu.onrender.com/taixiu"))],
-                [InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/tuanhung88_bot")]
-            ]
+            keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/tuanhung88_bot")]]
             
             if target_chat:
                 try:
@@ -724,7 +714,7 @@ async def run_taixiu_loop(application):
             
             is_betting_open = False  
 
-            # HẾT GIỜ CƯỢC: KHÓA CHAT NHÓM
+            # HẾT GIỜ CƯỢC: KHÓA CHAT NHÓM (CẤM NHẮN TIN)
             if target_chat:
                 try:
                     await application.bot.set_chat_permissions(
@@ -759,7 +749,7 @@ async def run_taixiu_loop(application):
             current_forced = forced_dice_result  
             forced_dice_result = None  
 
-            # ÉP KẾT QUẢ XÚC XẮC CHUẨN XÁC 100% QUA LỆNH ADMIN
+            # SỬA LỖI CHỈNH XÚC XẮC: Ép kết quả chuẩn xác 100%
             if current_forced == "TAI":
                 while True:
                     d1, d2, d3 = random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)
@@ -909,7 +899,6 @@ async def run_taixiu_loop(application):
             if target_chat:
                 try:
                     keyboard_kq = [
-                        [InlineKeyboardButton("🎲 Mở Bàn Tài Xỉu MD5 (Mini App)", web_app=WebAppInfo(url="https://bottaixiu.onrender.com/taixiu"))],
                         [InlineKeyboardButton("💲 Nạp tiền", url="https://t.me/tuanhung88_bot"), InlineKeyboardButton("📜 Lịch sử phiên", url="https://t.me/tuanhung88_bot")]
                     ]
                     await application.bot.send_message(
@@ -938,7 +927,7 @@ async def run_taixiu_loop(application):
             logging.error(f"Lỗi bên trong vòng lặp Tài Xỉu (đã tự động phục hồi): {loop_err}")
             await asyncio.sleep(5)
 
-# --- QUẢN TRỊ ADMIN (ẨN KHỎI NGƯỜI CHƠI THƯỜNG NHƯNG HOẠT ĐỘNG 100%) ---
+# --- QUẢN TRỊ ADMIN ---
 async def check_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
@@ -1153,7 +1142,8 @@ async def thutien_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **Cú pháp thu/trừ tiền thủ công:**\n"
             "• Cộng tiền: `/thutien [ID_user] +[số_tiền]`\n"
-            "• Trừ tiền: `/thutien [ID_user] -[số_tiền]`",
+            "• Trừ tiền: `/thutien [ID_user] -[số_tiền]`\n"
+            "VD: `/thutien 8361791292 +50k`",
             parse_mode="Markdown"
         )
         return
@@ -1177,7 +1167,7 @@ async def thutien_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             amount = -amount
 
     except ValueError:
-        await update.message.reply_text("❌ Sai định dạng số tiền!")
+        await update.message.reply_text("❌ Sai định dạng số tiền! (VD: `50k`, `100000`, `-50000`)")
         return
 
     target_user = get_user(target_user_id)
@@ -1291,7 +1281,7 @@ async def muagift_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user = get_user(user_id)
     if len(args) < 2:
-        await update.message.reply_text("⚠️ Dùng: `/muagift [số_lượng] [mệnh_giá]`", parse_mode="Markdown")
+        await update.message.reply_text("⚠️ Dùng: `/muagift [số_lượng] [mệnh_giá]` (VD: `/muagift 1 10000`)", parse_mode="Markdown")
         return
     try:
         soluong, menh_gia = int(args[0]), int(args[1])
@@ -1395,3 +1385,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         pass
+Tổng hợp vào bot.py để tôi chạy
