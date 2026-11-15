@@ -1,4 +1,4 @@
-import logging
+Import logging
 import random
 import asyncio
 import json
@@ -59,8 +59,8 @@ ADMIN_IDS = [8682451039]
 GROUP_CHAT_ID = -1004222063034  
 BACCARAT_GROUP_CHAT_ID = -1003973244307  
 
-# Biến toàn cục quản lý phiên Tài Xỉu & Chỉnh xúc xắc
-forced_dice_result = None  # Có thể là "TAI", "XIU", hoặc list [d1, d2, d3]
+# Biến toàn cục quản lý phiên Tài Xỉu
+forced_dice_result = None
 current_session = 200598
 huvang_pool = 295000
 session_bets = {"T": 0, "X": 0, "C": 0, "L": 0}
@@ -103,6 +103,7 @@ def get_user(user_id):
         }
         save_data()
     else:
+        # Kiểm tra xem có sang ngày mới chưa để reset doanh thu cược ngày
         u = users_db[user_id]
         if "today_bet" not in u:
             u["today_bet"] = 0
@@ -114,6 +115,7 @@ def get_user(user_id):
             u["last_claim_hoancuoc_date"] = ""
 
         if u["last_bet_date"] != today_str:
+            # Sang ngày mới: chuyển today_bet sang yesterday_bet và reset today_bet về 0
             u["yesterday_bet"] = u["today_bet"]
             u["today_bet"] = 0
             u["last_bet_date"] = today_str
@@ -638,15 +640,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "mua_gc":
         await query.message.reply_text("🎫 Dùng cú pháp: `/muagift [số_lượng] [mệnh_giá]`")
     elif data == "hc_ngay":
+        # Kiểm tra xem hôm nay đã nhận hoàn cược chưa
         if user.get("last_claim_hoancuoc_date") == today_str:
             await query.message.reply_text("❌ Bạn đã nhận hoàn cược của ngày hôm nay rồi! Mỗi ngày chỉ được nhận 1 lần.", parse_mode="Markdown")
             return
             
+        # Kiểm tra doanh thu cược ngày hôm qua
         yesterday_bet_amount = user.get("yesterday_bet", 0)
         if yesterday_bet_amount <= 0:
             await query.message.reply_text("❌ Ngày hôm trước bạn không có phát sinh cược, không đủ điều kiện nhận hoàn cược!", parse_mode="Markdown")
             return
             
+        # Tính hoàn cược 3%
         t = int(yesterday_bet_amount * 0.03)
         if t <= 0:
             await query.message.reply_text("❌ Số tiền hoàn cược quá nhỏ để quy đổi.", parse_mode="Markdown")
@@ -912,7 +917,7 @@ async def run_baccarat_loop(application):
             logging.error(f"Lỗi vòng lặp Baccarat: {loop_err}")
             await asyncio.sleep(5)
 
-# --- VÒNG LẶP GAME TÀI XỈU TỰ ĐỘNG (LẮC NGẦM, KHÔNG LỘ LỆNH) ---
+# --- VÒNG LẶP GAME TÀI XỈU TỰ ĐỘNG ---
 async def run_taixiu_loop(application):
     global current_session, session_bets, user_session_bets, user_session_total_bet, huvang_pool, forced_dice_result, history_sessions, is_betting_open, lucky_number, lucky_reward
     
@@ -957,8 +962,53 @@ async def run_taixiu_loop(application):
                     logging.error(f"Lỗi gửi tin nhắn mở phiên: {e}")
             
             await asyncio.sleep(20)
+            if target_chat:
+                try:
+                    await application.bot.send_message(
+                        chat_id=target_chat, 
+                        text=(
+                            f"`🦸‍♂️ Còn 40 giây phiên #{current_session}`\n"
+                            f"`🔵 TÀI: {session_bets['T']:,}`\n"
+                            f"`🔴 XỈU: {session_bets['X']:,}`\n"
+                            f"`⚪ CHẴN: {session_bets['C']:,}`\n"
+                            f"`⚫ LẺ: {session_bets['L']:,}`"
+                        ), 
+                        parse_mode="Markdown"
+                    )
+                except Exception:
+                    pass
             await asyncio.sleep(20)
+            if target_chat:
+                try:
+                    await application.bot.send_message(
+                        chat_id=target_chat, 
+                        text=(
+                            f"`🦸‍♂️ Còn 20 giây phiên #{current_session}`\n"
+                            f"`🔵 TÀI: {session_bets['T']:,}`\n"
+                            f"`🔴 XỈU: {session_bets['X']:,}`\n"
+                            f"`⚪ CHẴN: {session_bets['C']:,}`\n"
+                            f"`⚫ LẺ: {session_bets['L']:,}`"
+                        ), 
+                        parse_mode="Markdown"
+                    )
+                except Exception:
+                    pass
             await asyncio.sleep(10)
+            if target_chat:
+                try:
+                    await application.bot.send_message(
+                        chat_id=target_chat, 
+                        text=(
+                            f"`🦸‍♂️ Còn 10 giây phiên #{current_session}`\n"
+                            f"`🔵 TÀI: {session_bets['T']:,}`\n"
+                            f"`🔴 XỈU: {session_bets['X']:,}`\n"
+                            f"`⚪ CHẴN: {session_bets['C']:,}`\n"
+                            f"`⚫ LẺ: {session_bets['L']:,}`"
+                        ), 
+                        parse_mode="Markdown"
+                    )
+                except Exception:
+                    pass
             await asyncio.sleep(10)
             
             is_betting_open = False  
@@ -972,8 +1022,8 @@ async def run_taixiu_loop(application):
                             can_send_polls=False, can_send_other_messages=False, can_add_web_page_previews=False
                         )
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    logging.error(f"Lỗi khóa quyền chat nhóm: {e}")
 
             if target_chat:
                 try:
@@ -992,59 +1042,32 @@ async def run_taixiu_loop(application):
             
             dice_values = []
             current_forced = forced_dice_result  
-            forced_dice_result = None  # Reset lệnh ngay sau khi dùng cho phiên này
+            forced_dice_result = None  
 
-            # TRƯỜNG HỢP 1: Ép cụ thể 3 hột (VD: 6 5 6)
-            if isinstance(current_forced, list):
-                dice_values = current_forced
-                if target_chat:
-                    for _ in range(3):
-                        try:
-                            await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                            await asyncio.sleep(0.8)
-                        except Exception:
-                            pass
-
-            # TRƯỜNG HỢP 2: Ép TÀI (100% từ 11 đến 18) - Lắc ngầm chuẩn hiệu ứng
-            elif current_forced == "TAI":
+            if current_forced == "TAI":
                 while True:
-                    temp_dice = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
-                    if sum(temp_dice) >= 11:
-                        dice_values = temp_dice
+                    d1, d2, d3 = random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)
+                    if (d1 + d2 + d3) >= 11:
+                        dice_values = [d1, d2, d3]
                         break
-                if target_chat:
-                    for _ in range(3):
-                        try:
-                            await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                            await asyncio.sleep(0.8)
-                        except Exception:
-                            pass
-
-            # TRƯỜNG HỢP 3: Ép XỈU (100% từ 3 đến 10) - Lắc ngầm chuẩn hiệu ứng
             elif current_forced == "XIU":
                 while True:
-                    temp_dice = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
-                    if sum(temp_dice) <= 10:
-                        dice_values = temp_dice
+                    d1, d2, d3 = random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)
+                    if (d1 + d2 + d3) <= 10:
+                        dice_values = [d1, d2, d3]
                         break
-                if target_chat:
-                    for _ in range(3):
-                        try:
-                            await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                            await asyncio.sleep(0.8)
-                        except Exception:
-                            pass
-
-            # TRƯỜNG HỢP 4: Chế độ ngẫu nhiên bình thường
             else:
                 if target_chat:
                     for _ in range(3):
                         try:
                             msg_d = await application.bot.send_dice(chat_id=target_chat, emoji="🎲")
-                            val = getattr(msg_d.dice, 'value', None) or random.randint(1, 6)
+                            val = getattr(msg_d.dice, 'value', None)
+                            if val is None:
+                                val = random.randint(1, 6)
                             dice_values.append(val)
                             await asyncio.sleep(0.8)
-                        except Exception:
+                        except Exception as e:
+                            logging.error(f"Lỗi khi tung xúc xắc: {e}")
                             dice_values.append(random.randint(1, 6))
                 else:
                     dice_values = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
@@ -1558,43 +1581,18 @@ async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
     args = context.args
     if not args:
-        await update.message.reply_text(
-            "⚠️ **HƯỚNG DẪN DÙNG LỆNH CHỈNH XÚC XẮC:**\n"
-            "• `/chinhxucxac tai` — Ép ra Tài (11-18)\n"
-            "• `/chinhxucxac xiu` — Ép ra Xỉu (3-10)\n"
-            "• `/chinhxucxac [d1] [d2] [d3]` — Ép chuẩn 3 hột (VD: `/chinhxucxac 6 5 6`)\n"
-            "• `/chinhxucxac reset` — Quay lại ngẫu nhiên",
-            parse_mode="Markdown"
-        )
+        await update.message.reply_text("⚠️ Dùng: `/chinhxucxac tai` hoặc `/chinhxucxac xiu` hoặc `/chinhxucxac reset`")
         return
-    
-    if len(args) == 1:
-        mode = args[0].lower()
-        if mode in ["tai", "eptai"]:
-            forced_dice_result = "TAI"
-            await update.message.reply_text("⚡ Đã khóa 100% ra TÀI cho phiên kế tiếp!", parse_mode="Markdown")
-        elif mode in ["xiu", "epxiu"]:
-            forced_dice_result = "XIU"
-            await update.message.reply_text("⚡ Đã khóa 100% ra XỈU cho phiên kế tiếp!", parse_mode="Markdown")
-        elif mode in ["reset", "off", "huy"]:
-            forced_dice_result = None
-            await update.message.reply_text("🔄 Đã reset xúc xắc về trạng thái ngẫu nhiên.", parse_mode="Markdown")
-        else:
-            await update.message.reply_text("❌ Lệnh không hợp lệ! Dùng: `/chinhxucxac tai`, `xiu`, `reset` hoặc `[d1] [d2] [d3]`", parse_mode="Markdown")
-    elif len(args) == 3:
-        try:
-            d1, d2, d3 = int(args[0]), int(args[1]), int(args[2])
-            if not (1 <= d1 <= 6 and 1 <= d2 <= 6 and 1 <= d3 <= 6):
-                await update.message.reply_text("❌ Mỗi hột xúc xắc phải có giá trị từ 1 đến 6!")
-                return
-            forced_dice_result = [d1, d2, d3]
-            tong = d1 + d2 + d3
-            ket_qua = "TÀI" if tong >= 11 else "XỈU"
-            await update.message.reply_text(f"⚡ Đã ép kết quả phiên tiếp theo thành: `{d1} - {d2} - {d3}` (Tổng: `{tong}` - `{ket_qua}`)", parse_mode="Markdown")
-        except ValueError:
-            await update.message.reply_text("❌ Các hột xúc xắc phải là số nguyên từ 1 đến 6!")
+    mode = args[0].lower()
+    if mode in ["tai", "eptai"]:
+        forced_dice_result = "TAI"
+        await update.message.reply_text("⚡ Đã khóa 100% ra TÀI ngay phiên hiện tại!")
+    elif mode in ["xiu", "epxiu"]:
+        forced_dice_result = "XIU"
+        await update.message.reply_text("⚡ Đã khóa 100% ra XỈU ngay phiên hiện tại!")
     else:
-        await update.message.reply_text("❌ Sai cú pháp! Dùng `/chinhxucxac [d1] [d2] [d3]` hoặc `/chinhxucxac tai/xiu/reset`", parse_mode="Markdown")
+        forced_dice_result = None
+        await update.message.reply_text("🔄 Đã reset xúc xắc ngẫu nhiên.")
 
 async def code_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
