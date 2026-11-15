@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import threading
+from datetime import datetime
 from flask import Flask
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, CallbackQueryHandler, filters
@@ -81,6 +82,7 @@ is_loop_running = False
 is_bac_loop_running = False
 
 def get_user(user_id):
+    today_str = datetime.now().strftime("%Y-%m-%d")
     if user_id not in users_db:
         users_db[user_id] = {
             "balance": 0,
@@ -93,9 +95,32 @@ def get_user(user_id):
             "bank_info": None,  
             "history_nap": [],
             "history_rut": [],
-            "history_choi": []
+            "history_choi": [],
+            "last_bet_date": "",
+            "yesterday_bet": 0,
+            "today_bet": 0,
+            "last_claim_hoancuoc_date": ""
         }
         save_data()
+    else:
+        # Kiểm tra xem có sang ngày mới chưa để reset doanh thu cược ngày
+        u = users_db[user_id]
+        if "today_bet" not in u:
+            u["today_bet"] = 0
+        if "yesterday_bet" not in u:
+            u["yesterday_bet"] = 0
+        if "last_bet_date" not in u:
+            u["last_bet_date"] = today_str
+        if "last_claim_hoancuoc_date" not in u:
+            u["last_claim_hoancuoc_date"] = ""
+
+        if u["last_bet_date"] != today_str:
+            # Sang ngày mới: chuyển today_bet sang yesterday_bet và reset today_bet về 0
+            u["yesterday_bet"] = u["today_bet"]
+            u["today_bet"] = 0
+            u["last_bet_date"] = today_str
+            save_data()
+            
     return users_db[user_id]
 
 def update_vip(user_data):
@@ -211,6 +236,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             user["balance"] -= bet_amount
             user["total_bet"] += bet_amount
+            user["today_bet"] += bet_amount
             save_data()
 
             bac_session_bets[choice] += bet_amount
@@ -300,6 +326,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             user["balance"] -= bet_amount
             user["total_bet"] += bet_amount
+            user["today_bet"] += bet_amount
             save_data()  
             
             session_bets[choice] += bet_amount
@@ -563,6 +590,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user_id = query.from_user.id
     data = query.data
+    user = get_user(user_id)
+    today_str = datetime.now().strftime("%Y-%m-%d")
 
     if data.startswith("nap_") and data != "nap_nganhang":
         amount = int(data.replace("nap_", ""))
@@ -611,11 +640,27 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "mua_gc":
         await query.message.reply_text("🎫 Dùng cú pháp: `/muagift [số_lượng] [mệnh_giá]`")
     elif data == "hc_ngay":
-        u = get_user(user_id)
-        t = int(u["total_bet"] * 0.004)
-        u["balance"] += t
+        # Kiểm tra xem hôm nay đã nhận hoàn cược chưa
+        if user.get("last_claim_hoancuoc_date") == today_str:
+            await query.message.reply_text("❌ Bạn đã nhận hoàn cược của ngày hôm nay rồi! Mỗi ngày chỉ được nhận 1 lần.", parse_mode="Markdown")
+            return
+            
+        # Kiểm tra doanh thu cược ngày hôm qua
+        yesterday_bet_amount = user.get("yesterday_bet", 0)
+        if yesterday_bet_amount <= 0:
+            await query.message.reply_text("❌ Ngày hôm trước bạn không có phát sinh cược, không đủ điều kiện nhận hoàn cược!", parse_mode="Markdown")
+            return
+            
+        # Tính hoàn cược 3%
+        t = int(yesterday_bet_amount * 0.03)
+        if t <= 0:
+            await query.message.reply_text("❌ Số tiền hoàn cược quá nhỏ để quy đổi.", parse_mode="Markdown")
+            return
+            
+        user["balance"] += t
+        user["last_claim_hoancuoc_date"] = today_str
         save_data()
-        await query.message.reply_text(f"🎁 Nhận hoàn cược: `+{t:,}đ`", parse_mode="Markdown")
+        await query.message.reply_text(f"🎁 Nhận hoàn cược thành công: `+{t:,}đ` (3% trên tổng cược ngày hôm trước)", parse_mode="Markdown")
     elif data == "ho_tro":
         await query.message.reply_text("🎧 Hỗ trợ 24/7.")
     elif data == "nap_nganhang":
@@ -919,7 +964,6 @@ async def run_taixiu_loop(application):
             await asyncio.sleep(20)
             if target_chat:
                 try:
-                    # Đã bổ sung đầy đủ CHẴN và LẺ trong thông báo 40s
                     await application.bot.send_message(
                         chat_id=target_chat, 
                         text=(
@@ -936,7 +980,6 @@ async def run_taixiu_loop(application):
             await asyncio.sleep(20)
             if target_chat:
                 try:
-                    # Đã bổ sung đầy đủ CHẴN và LẺ trong thông báo 20s
                     await application.bot.send_message(
                         chat_id=target_chat, 
                         text=(
@@ -953,7 +996,6 @@ async def run_taixiu_loop(application):
             await asyncio.sleep(10)
             if target_chat:
                 try:
-                    # Đã bổ sung đầy đủ CHẴN và LẺ trong thông báo 10s
                     await application.bot.send_message(
                         chat_id=target_chat, 
                         text=(
