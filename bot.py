@@ -411,7 +411,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         keyboard = [
             [InlineKeyboardButton("🎲 Tài Xỉu Room", url="https://t.me/tuanhung88chat")],
-            [InlineKeyboardButton("🃏 Baccarat Room", url="https://t.me/tuanhung88chat")]
+            [InlineKeyboardButton("🃏 Baccarat Room", url="https://t.me/tuanhung88bacarat")]
         ]
         await update.message.reply_text(game_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
