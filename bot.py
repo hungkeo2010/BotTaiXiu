@@ -417,7 +417,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📜 **DANH SÁCH LỆNH**\n\n"
             "🎲 **Game Tài Xỉu:**\n"
             "• `T/X/C/L [tiền]` (VD: `T 10k`, `T all`) — Cược Tài/Xỉu/Chẵn/Lẻ (Max 3M/bên)\n\n"
-            "🃏 **Game Baccarat:**\n"
+            "🃏 **Game Baccarat (Đổ con & Cái bằng 3 viên xúc xắc):**\n"
             "• `C/P/H [tiền]` (VD: `C 5000`, `P 10k`) — Cược Cái / Con / Hòa (Min 1k, Max/ng 10M, Max/cửa 50M)\n\n"
             "• `/nhanthuong` — Nhận thưởng sự kiện Tài Xỉu\n"
             "• `/muagift [số_lượng] [mệnh_giá]` — Mua giftcode tự động từ số dư\n"
@@ -685,7 +685,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.message.reply_text(caption_text, parse_mode="Markdown")
 
-# --- VÒNG LẶP GAME BACCARAT TỰ ĐỘNG ---
+# --- VÒNG LẶP GAME BACCARAT TỰ ĐỘNG (DÙNG 3 XÚC XẮC CHO CON & 3 XÚC XẮC CHO CÁI) ---
 async def run_baccarat_loop(application):
     global current_bac_session, bac_session_bets, user_bac_session_bets, history_bac_sessions, is_bac_betting_open
     
@@ -773,13 +773,17 @@ async def run_baccarat_loop(application):
                         f"🟡 **Hòa (H): {bac_session_bets['H']:,}**"
                     )
                     await application.bot.send_message(chat_id=target_chat, text=end_bet_text, parse_mode="Markdown")
-                    await application.bot.send_message(chat_id=target_chat, text=f"💥 **Đang đổ con và đổ cái phiên #{current_bac_session}**", parse_mode="Markdown")
+                    await application.bot.send_message(chat_id=target_chat, text=f"💥 **Đang đổ con và đổ cái phiên #{current_bac_session} (Tung 3 xúc xắc mỗi bên)**", parse_mode="Markdown")
                 except Exception:
                     pass
 
-            # Mô phỏng đổ điểm Con và Cái (0 - 9 điểm)
-            diem_con = random.randint(0, 9)
-            diem_cai = random.randint(0, 9)
+            # --- TUNG 3 XÚC XẮC CHO CON VÀ 3 XÚC XẮC CHO CÁI ---
+            con_dice = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
+            cai_dice = [random.randint(1, 6), random.randint(1, 6), random.randint(1, 6)]
+
+            # Tính điểm bằng tổng 3 viên xúc xắc (hoặc lấy hàng đơn vị tổng điểm tùy quy ước, ở đây lấy tổng 3 viên hoặc % 10)
+            diem_con = sum(con_dice) % 10
+            diem_cai = sum(cai_dice) % 10
 
             if diem_cai > diem_con:
                 ket_qua_bac = "C" 
@@ -851,7 +855,8 @@ async def run_baccarat_loop(application):
 
             ket_qua_bac_msg = (
                 f"🎲 **KẾT QUẢ BACCARAT PHIÊN #{current_bac_session}**\n"
-                f"• Điểm Con: `{diem_con}` | Điểm Cái: `{diem_cai}`\n"
+                f"🔵 **Xúc xắc Con:** `{con_dice[0]} {con_dice[1]} {con_dice[2]}` (Điểm: `{diem_con}`)\n"
+                f"🔴 **Xúc xắc Cái:** `{cai_dice[0]} {cai_dice[1]} {cai_dice[2]}` (Điểm: `{diem_cai}`)\n"
                 f"🏆 Thắng: {icon_bac} **{'CÁI (C)' if ket_qua_bac=='C' else ('CON (P)' if ket_qua_bac=='P' else 'HÒA (H)')}**\n\n"
                 f"| ｜ **Tổng thắng: {tong_thang_bac:,}**\n"
                 f"| ｜ **Tổng thua: {tong_thua_bac:,}**\n\n"
