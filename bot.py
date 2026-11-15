@@ -820,9 +820,8 @@ async def run_baccarat_loop(application):
             while len(cai_dice) < 3:
                 cai_dice.append(random.randint(1, 6))
 
-            await asyncio.sleep(2.5) # Chờ xúc xắc lăn xong
+            await asyncio.sleep(2.5)
 
-            # Tính điểm theo quy ước Baccarat (tổng 3 viên % 10)
             diem_con = sum(con_dice) % 10
             diem_cai = sum(cai_dice) % 10
 
@@ -853,7 +852,6 @@ async def run_baccarat_loop(application):
                     if b_amt <= 0:
                         continue
                     
-                    # LUẬT: RA HÒA (H) THÌ CƯỢC CÁI HOẶC CON BỊ TRỪ HẾT (THUA)
                     if ket_qua_bac == "H":
                         if door == "H":
                             thuong = b_amt * 8
@@ -1206,12 +1204,22 @@ async def check_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     u = users_db[target_id]
     update_vip(u)
     
+    ls_choi_gần_nhất = "\n".join(u["history_choi"][-5:]) if u["history_choi"] else "Chưa có lịch sử chơi"
+    ls_nap_gần_nhất = "\n".join(u["history_nap"][-3:]) if u["history_nap"] else "Chưa có lịch sử nạp"
+    ls_rut_gần_nhất = "\n".join(u["history_rut"][-3:]) if u["history_rut"] else "Chưa có lịch sử rút"
+
     info_str = (
         f"🔍 **THÔNG TIN KHÁCH CHƠI (ID: {target_id})**\n\n"
         f"🪙 Số dư: `{u['balance']:,} VNĐ`\n"
         f"📊 Tổng cược tích lũy: `{u['total_bet']:,} VNĐ`\n"
+        f"🎯 Vòng cược yêu cầu: `{u['required_turnover']:,} VNĐ`\n"
         f"👑 Cấp VIP: `{u['vip_level']}` (Điểm: {u['vip_points']})\n"
-        f"🏦 Ngân hàng: `{u['bank_info'] if u['bank_info'] else 'Chưa cài'}`"
+        f"🎁 Đã nhận X2 lần đầu: `{'Rồi ✅' if u.get('has_received_x2') else 'Chưa ❌'}`\n"
+        f"🏦 Ngân hàng: `{u['bank_info'] if u['bank_info'] else 'Chưa cài'}`\n"
+        f"🔰 Trạng thái: `{'Tân thủ' if u['is_newbie'] else 'Chính thức'}`\n\n"
+        f"📜 **5 Lịch sử chơi gần nhất:**\n{ls_choi_gần_nhất}\n\n"
+        f"🟩 **Lịch sử nạp:**\n{ls_nap_gần_nhất}\n\n"
+        f"🟥 **Lịch sử rút:**\n{ls_rut_gần_nhất}"
     )
     await update.message.reply_text(info_str, parse_mode="Markdown")
 
@@ -1220,15 +1228,46 @@ async def mo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     args = context.args
     if not args:
+        await update.message.reply_text("⚠️ Dùng: `/mo [ID_user]` để mở khóa tân thủ cho người chơi.", parse_mode="Markdown")
         return
     try:
         target_id = int(args[0])
     except ValueError:
+        await update.message.reply_text("❌ ID không hợp lệ!")
         return
-    if target_id in users_db:
-        users_db[target_id]["is_newbie"] = False
-        save_data()
-        await update.message.reply_text(f"✅ Đã mở khóa tân thủ cho ID `{target_id}`.")
+
+    if target_id not in users_db:
+        await update.message.reply_text(f"❌ Không tìm thấy user ID `{target_id}` trong hệ thống.", parse_mode="Markdown")
+        return
+
+    users_db[target_id]["is_newbie"] = False
+    save_data()
+
+    await update.message.reply_text(f"✅ Đã mở khóa thành công! User ID `{target_id}` không còn là tân thủ.", parse_mode="Markdown")
+    try:
+        await context.bot.send_message(chat_id=target_id, text="🎉 Tài khoản của bạn đã được Admin mở khóa!", parse_mode="Markdown")
+    except Exception:
+        pass
+
+async def congvongcuoc_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    args = context.args
+    if len(args) < 2:
+        await update.message.reply_text("⚠️ Dùng: `/congvongcuoc [ID_user] [số_vòng_cần_cộng]`", parse_mode="Markdown")
+        return
+    try:
+        target_id = int(args[0])
+        vong_them = int(args[1])
+    except ValueError:
+        await update.message.reply_text("❌ ID hoặc số vòng cược phải là số nguyên!")
+        return
+
+    u = get_user(target_id)
+    u["required_turnover"] += vong_them
+    save_data()
+
+    await update.message.reply_text(f"✅ Đã cộng thêm vòng cược cho user `{target_id}` thành công!\n📊 Tổng yêu cầu cược hiện tại: `{u['required_turnover']:,}đ`", parse_mode="Markdown")
 
 async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
@@ -1242,35 +1281,267 @@ async def duyet_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = info["user_id"]
         u = get_user(user_id)
         u["is_newbie"] = False
+        
         so_tien_nap = info["amount"]
         thuc_nhan = so_tien_nap
+        x2_msg = ""
+        
         if not u.get("has_received_x2", False):
             thuc_nhan = so_tien_nap * 2
             u["has_received_x2"] = True
+            vong_cuoc = (so_tien_nap * 2) * 4  
+            u["required_turnover"] += vong_cuoc
+            x2_msg = f"\n🎁 **Khuyến mãi X2:** Nhận `{thuc_nhan:,}đ` | Yêu cầu cược x4 (`{vong_cuoc:,}đ`) để rút!"
+        else:
+            vong_cuoc = so_tien_nap * 2  
+            u["required_turnover"] += vong_cuoc
+            x2_msg = f"\n📌 **Nạp từ lần 2:** Yêu cầu cược x2 (`{vong_cuoc:,}đ`) để rút!"
+
         u["balance"] += thuc_nhan
+        u["history_nap"].append(f"Nạp thành công {so_tien_nap:,}đ (Thực nhận {thuc_nhan:,}đ)")
         save_data()
         del pending_nap[ma_gd]
+        
         try:
-            await context.bot.send_message(chat_id=user_id, text=f"✅ **NẠP THÀNH CÔNG!**\nCộng `+{thuc_nhan:,}đ`", parse_mode="Markdown")
+            await context.bot.send_message(
+                chat_id=user_id, 
+                text=f"✅ **NẠP THÀNH CÔNG!**\nCộng `+{thuc_nhan:,}đ`{x2_msg}\n🪙 Số dư mới: `{u['balance']:,}đ`", 
+                parse_mode="Markdown"
+            )
         except Exception:
             pass
-        await update.message.reply_text(f"✅ Đã duyệt mã nạp #{ma_gd} thành công!")
+        await update.message.reply_text(f"✅ Đã duyệt mã nạp #{ma_gd} thành công (Thực nhận: {thuc_nhan:,}đ)!")
+
+async def tuchoi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    args = context.args
+    if not args:
+        return
+    ma_gd = args[0]
+    if ma_gd in pending_nap:
+        del pending_nap[ma_gd]
+        await update.message.reply_text(f"❌ Đã từ chối mã nạp #{ma_gd}.")
 
 async def duyetrut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
     args = context.args
     if not args:
+        await update.message.reply_text("⚠️ Dùng: `/duyetrut [mã_gd]`")
         return
     ma_rut = args[0]
     if ma_rut in pending_rut:
         info = pending_rut[ma_rut]
+        u = get_user(info["user_id"])
+        u["history_rut"].append(f"Rút thành công {info['amount']:,}đ về {u['bank_info']}")
+        save_data()
         del pending_rut[ma_rut]
         try:
-            await context.bot.send_message(chat_id=info["user_id"], text=f"✅ **RÚT TIỀN THÀNH CÔNG!**", parse_mode="Markdown")
+            await context.bot.send_message(
+                chat_id=info["user_id"], 
+                text=f"✅ **RÚT TIỀN THÀNH CÔNG!**\nAdmin đã chuyển khoản `{info['amount']:,}đ` về STK của bạn.", 
+                parse_mode="Markdown"
+            )
         except Exception:
             pass
-        await update.message.reply_text(f"✅ Đã duyệt lệnh rút #{ma_rut}!")
+        await update.message.reply_text(f"✅ Đã duyệt lệnh rút #{ma_rut} thành công!")
+    else:
+        await update.message.reply_text("❌ Không tìm thấy mã rút tiền này hoặc đã được xử lý!")
+
+async def tuchoirut_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    args = context.args
+    if not args:
+        await update.message.reply_text("⚠️ Dùng: `/tuchoirut [mã_gd]`")
+        return
+    ma_rut = args[0]
+    if ma_rut in pending_rut:
+        info = pending_rut[ma_rut]
+        u = get_user(info["user_id"])
+        u["balance"] += info["amount"]
+        save_data()
+        del pending_rut[ma_rut]
+        try:
+            await context.bot.send_message(
+                chat_id=info["user_id"], 
+                text=f"❌ **YÊU CẦU RÚT TIỀN BỊ TỪ CHỐI!**\nSố tiền `{info['amount']:,}đ` đã được hoàn lại vào số dư của bạn.", 
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
+        await update.message.reply_text(f"❌ Đã từ chối lệnh rút #{ma_rut} và hoàn tiền cho người chơi.")
+    else:
+        await update.message.reply_text("❌ Không tìm thấy mã rút tiền này hoặc đã được xử lý!")
+
+async def thutien_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    args = context.args
+    if len(args) < 2:
+        await update.message.reply_text(
+            "⚠️ **Cú pháp thu/trừ tiền thủ công:**\n"
+            "• Cộng tiền: `/thutien [ID_user] +[số_tiền]`\n"
+            "• Trừ tiền: `/thutien [ID_user] -[số_tiền]`",
+            parse_mode="Markdown"
+        )
+        return
+    
+    try:
+        target_user_id = int(args[0])
+        amount_str = args[1].lower()
+        is_minus = amount_str.startswith("-")
+        if is_minus or amount_str.startswith("+"):
+            amount_str = amount_str[1:]
+            
+        cleaned = amount_str.replace(",", "").replace(".", "")
+        if cleaned.endswith("k"):
+            amount = int(cleaned[:-1]) * 1000
+        elif cleaned.endswith("m"):
+            amount = int(cleaned[:-1]) * 1000000
+        else:
+            amount = int(cleaned)
+            
+        if is_minus:
+            amount = -amount
+
+    except ValueError:
+        await update.message.reply_text("❌ Sai định dạng số tiền!")
+        return
+
+    target_user = get_user(target_user_id)
+    target_user["balance"] += amount
+    
+    if amount > 0:
+        target_user["is_newbie"] = False
+        target_user["history_nap"].append(f"Admin cộng thủ công: +{amount:,}đ")
+        
+    save_data()
+
+    await update.message.reply_text(
+        f"✅ **ĐÃ THỰC THI THÀNH CÔNG!**\n"
+        f"👤 ID: `{target_user_id}`\n"
+        f"💸 Biến động: `{amount:+,}đ`\n"
+        f"🪙 Số dư mới: `{target_user['balance']:,}đ`",
+        parse_mode="Markdown"
+    )
+
+    try:
+        action_text = f"nhận được `+{amount:,}đ`" if amount > 0 else f"bị trừ `{amount:,}đ`"
+        await context.bot.send_message(
+            chat_id=target_user_id,
+            text=f"🔔 **THÔNG BÁO TỪ HỆ THỐNG**\nTài khoản của bạn vừa {action_text} từ Admin.\n🪙 Số dư hiện tại: `{target_user['balance']:,}đ`",
+            parse_mode="Markdown"
+        )
+    except Exception:
+        pass
+
+async def taocode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    args = context.args
+    if len(args) < 2:
+        return
+    try:
+        soluong, tien = int(args[0]), int(args[1])
+    except ValueError:
+        return
+    codes = []
+    for _ in range(soluong):
+        c = f"HIT{random.randint(100000, 999999)}"
+        giftcode_db[c] = tien
+        codes.append(c)
+    await update.message.reply_text(f"✅ Tạo thành công {soluong} mã:\n`" + "\n".join(codes) + "`", parse_mode="Markdown")
+
+async def themcode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    args = context.args
+    if len(args) < 2:
+        return
+    code, tien = args[0], int(args[1])
+    giftcode_db[code] = tien
+    await update.message.reply_text(f"✅ Đã thêm mã `{code}` trị giá `{tien:,}đ`!", parse_mode="Markdown")
+
+async def xoacode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    args = context.args
+    if not args:
+        return
+    code = args[0]
+    if code in giftcode_db:
+        del giftcode_db[code]
+        await update.message.reply_text(f"🗑️ Đã xóa mã `{code}`.")
+
+async def danhsachcode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    if not giftcode_db:
+        await update.message.reply_text("📂 Kho giftcode trống.")
+        return
+    list_str = "\n".join([f"• `{k}`: {v:,}đ" for k, v in giftcode_db.items()])
+    await update.message.reply_text(f"📂 **KHO GIFTCODE:**\n{list_str}", parse_mode="Markdown")
+
+async def muagift_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    args = context.args
+    user_id = update.effective_user.id
+    user = get_user(user_id)
+    if len(args) < 2:
+        await update.message.reply_text("⚠️ Dùng: `/muagift [số_lượng] [mệnh_giá]`", parse_mode="Markdown")
+        return
+    try:
+        soluong, menh_gia = int(args[0]), int(args[1])
+    except ValueError:
+        await update.message.reply_text("❌ Sai định dạng số lượng hoặc mệnh giá!")
+        return
+
+    available_codes = [code for code, val in giftcode_db.items() if val == menh_gia]
+    if len(available_codes) < soluong:
+        await update.message.reply_text(f"❌ Kho hiện chỉ còn {len(available_codes)} mã mệnh giá {menh_gia:,}đ.")
+        return
+
+    tong_thanh_toan = int((soluong * menh_gia) * 1.05) 
+    if user["balance"] < tong_thanh_toan:
+        await update.message.reply_text(f"❌ Số dư không đủ! Cần `{tong_thanh_toan:,}đ` (gồm 5% phí giao dịch).")
+        return
+
+    user["balance"] -= tong_thanh_toan
+    save_data()
+
+    bought_codes = []
+    for _ in range(soluong):
+        c = available_codes.pop(0)
+        del giftcode_db[c]
+        bought_codes.append(c)
+
+    await update.message.reply_text(
+        f"✅ **MUA GIFTCODE THÀNH CÔNG!**\n"
+        f"🎫 Mệnh giá: `{menh_gia:,}đ` x {soluong}\n"
+        f"💸 Trừ số dư: `{tong_thanh_toan:,}đ` (đã gồm 5% phí)\n"
+        f"🎁 Mã của bạn: `" + ", ".join(bought_codes) + "`",
+        parse_mode="Markdown"
+    )
+
+async def chinhxucxac_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global forced_dice_result
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    args = context.args
+    if not args:
+        await update.message.reply_text("⚠️ Dùng: `/chinhxucxac tai` hoặc `/chinhxucxac xiu` hoặc `/chinhxucxac reset`")
+        return
+    mode = args[0].lower()
+    if mode in ["tai", "eptai"]:
+        forced_dice_result = "TAI"
+        await update.message.reply_text("⚡ Đã khóa 100% ra TÀI ngay phiên hiện tại!")
+    elif mode in ["xiu", "epxiu"]:
+        forced_dice_result = "XIU"
+        await update.message.reply_text("⚡ Đã khóa 100% ra XỈU ngay phiên hiện tại!")
+    else:
+        forced_dice_result = None
+        await update.message.reply_text("🔄 Đã reset xúc xắc ngẫu nhiên.")
 
 async def code_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
@@ -1299,12 +1570,23 @@ async def main():
     application.add_handler(CommandHandler("rut", rut_command))
     application.add_handler(CommandHandler("check", check_user_command))
     application.add_handler(CommandHandler("mo", mo_command))
+    application.add_handler(CommandHandler("congvongcuoc", congvongcuoc_command))
     application.add_handler(CommandHandler("duyet", duyet_command))
+    application.add_handler(CommandHandler("tuchoi", tuchoi_command))
     application.add_handler(CommandHandler("duyetrut", duyetrut_command))
+    application.add_handler(CommandHandler("tuchoirut", tuchoirut_command))
+    application.add_handler(CommandHandler("thutien", thutien_command))
+    application.add_handler(CommandHandler("trutien", thutien_command))
     application.add_handler(CommandHandler("lamcai", lamcai_command))
     application.add_handler(CommandHandler("nhanthuong", nhanthuong_command))
+    application.add_handler(CommandHandler("muagift", muagift_command))
+    application.add_handler(CommandHandler("taocode", taocode_command))
+    application.add_handler(CommandHandler("themcode", themcode_command))
+    application.add_handler(CommandHandler("xoacode", xoacode_command))
+    application.add_handler(CommandHandler("danhsachcode", danhsachcode_command))
     application.add_handler(CommandHandler("code", code_command))
     application.add_handler(CommandHandler("nhapcode", code_command))
+    application.add_handler(CommandHandler("chinhxucxac", chinhxucxac_command))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     application.add_handler(CallbackQueryHandler(button_callback))
     
