@@ -664,7 +664,6 @@ async def run_baccarat_loop(application):
                 except Exception as e:
                     logging.error(f"Lỗi mở quyền chat Baccarat: {e}")
 
-            # Đã bọc toàn bộ nội dung mở phiên Baccarat trong dấu backtick để thành dạng mã đậm
             start_text = (
                 f"`👍 Bắt đầu nhận cược • Phiên #{current_bac_session}`\n"
                 f"`💰 Min 1.000 · Max/ng 10.000.000 · Max/cửa 50.000.000`\n\n"
@@ -901,7 +900,6 @@ async def run_taixiu_loop(application):
                 except Exception as e:
                     logging.error(f"Lỗi mở quyền chat nhóm: {e}")
 
-            # Đã bọc toàn bộ nội dung mở phiên Tài Xỉu trong dấu backtick để thành dạng mã đậm
             start_text = (
                 f"`🐸 TuanHung88 - TUNG XX 🎲`\n"
                 f"`🔥 Xin mời đặt cược phiên XX`\n"
@@ -921,19 +919,52 @@ async def run_taixiu_loop(application):
             await asyncio.sleep(20)
             if target_chat:
                 try:
-                    await application.bot.send_message(chat_id=target_chat, text=f"`🦸‍♂️ Còn 40 giây phiên #{current_session}`\n`🔵 TÀI: {session_bets['T']:,}`\n`🔴 XỈU: {session_bets['X']:,}`", parse_mode="Markdown")
+                    # Đã bổ sung đầy đủ CHẴN và LẺ trong thông báo 40s
+                    await application.bot.send_message(
+                        chat_id=target_chat, 
+                        text=(
+                            f"`🦸‍♂️ Còn 40 giây phiên #{current_session}`\n"
+                            f"`🔵 TÀI: {session_bets['T']:,}`\n"
+                            f"`🔴 XỈU: {session_bets['X']:,}`\n"
+                            f"`⚪ CHẴN: {session_bets['C']:,}`\n"
+                            f"`⚫ LẺ: {session_bets['L']:,}`"
+                        ), 
+                        parse_mode="Markdown"
+                    )
                 except Exception:
                     pass
             await asyncio.sleep(20)
             if target_chat:
                 try:
-                    await application.bot.send_message(chat_id=target_chat, text=f"`🦸‍♂️ Còn 20 giây phiên #{current_session}`\n`🔵 TÀI: {session_bets['T']:,}`\n`🔴 XỈU: {session_bets['X']:,}`", parse_mode="Markdown")
+                    # Đã bổ sung đầy đủ CHẴN và LẺ trong thông báo 20s
+                    await application.bot.send_message(
+                        chat_id=target_chat, 
+                        text=(
+                            f"`🦸‍♂️ Còn 20 giây phiên #{current_session}`\n"
+                            f"`🔵 TÀI: {session_bets['T']:,}`\n"
+                            f"`🔴 XỈU: {session_bets['X']:,}`\n"
+                            f"`⚪ CHẴN: {session_bets['C']:,}`\n"
+                            f"`⚫ LẺ: {session_bets['L']:,}`"
+                        ), 
+                        parse_mode="Markdown"
+                    )
                 except Exception:
                     pass
             await asyncio.sleep(10)
             if target_chat:
                 try:
-                    await application.bot.send_message(chat_id=target_chat, text=f"`🦸‍♂️ Còn 10 giây phiên #{current_session}`\n`🔵 TÀI: {session_bets['T']:,}`\n`🔴 XỈU: {session_bets['X']:,}`", parse_mode="Markdown")
+                    # Đã bổ sung đầy đủ CHẴN và LẺ trong thông báo 10s
+                    await application.bot.send_message(
+                        chat_id=target_chat, 
+                        text=(
+                            f"`🦸‍♂️ Còn 10 giây phiên #{current_session}`\n"
+                            f"`🔵 TÀI: {session_bets['T']:,}`\n"
+                            f"`🔴 XỈU: {session_bets['X']:,}`\n"
+                            f"`⚪ CHẴN: {session_bets['C']:,}`\n"
+                            f"`⚫ LẺ: {session_bets['L']:,}`"
+                        ), 
+                        parse_mode="Markdown"
+                    )
                 except Exception:
                     pass
             await asyncio.sleep(10)
