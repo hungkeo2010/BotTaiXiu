@@ -53,7 +53,7 @@ giftcode_db = {}
 pending_nap = {}    
 pending_rut = {}    
 
-# --- CẤU HÌNH TOKEN & ID NHÓM (Thay thông tin của bạn vào đây) ---
+# --- CẤU HÌNH TOKEN & ID NHÓM ---
 TOKEN = "9286450426:AAHYoubtmQirYbLnmmN309OeA81sABUrxsA"
 ADMIN_IDS = [8682451039]
 GROUP_CHAT_ID = -1004222063034  
@@ -103,7 +103,6 @@ def get_user(user_id):
         }
         save_data()
     else:
-        # Kiểm tra xem có sang ngày mới chưa để reset doanh thu cược ngày
         u = users_db[user_id]
         if "today_bet" not in u:
             u["today_bet"] = 0
@@ -115,7 +114,6 @@ def get_user(user_id):
             u["last_claim_hoancuoc_date"] = ""
 
         if u["last_bet_date"] != today_str:
-            # Sang ngày mới: chuyển today_bet sang yesterday_bet và reset today_bet về 0
             u["yesterday_bet"] = u["today_bet"]
             u["today_bet"] = 0
             u["last_bet_date"] = today_str
@@ -158,7 +156,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🎁 **QUY ĐỊNH NẠP & RÚT:**\n"
         f"• **Nạp lần đầu:** X2 số tiền (Yêu cầu vòng cược **x4** mới được rút)\n"
         f"• **Nạp từ lần 2:** Yêu cầu vòng cược **x2** mới được rút\n\n"
-        f"🏛️ Tham gia Room TX để săn hũ và nhận giftcode hằng ngày https://t.me/tuanhung88chat"
+        f"🏛️ Tham gia Room TX để săn hũ và nhận giftcode hằng ngày https://t.me/sunhitwin99chat"
     )
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=get_main_menu())
 
@@ -243,7 +241,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_bac_session_bets[user_id][choice] += bet_amount
 
             door_display = {"C": "🔴 Cái", "P": "🔵 Con", "H": "🟡 Hòa"}
-            ma_gd = f"BMW{''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=12))}"
+            ma_gd = f"SHW{''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=12))}"
             masked_id = f"****{str(user_id)[-4:]}"
             max_thang = int(bet_amount * 1.95) if choice in ["C", "P"] else bet_amount * 8
 
@@ -410,8 +408,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Vui lòng chọn phòng game bạn muốn tham gia:"
         )
         keyboard = [
-            [InlineKeyboardButton("🎲 Tài Xỉu Room", url="https://t.me/tuanhung88chat")],
-            [InlineKeyboardButton("🃏 Baccarat Room", url="https://t.me/tuanhung88bacarat")]
+            [InlineKeyboardButton("🎲 Tài Xỉu Room", url="https://t.me/sunhitwin99chat")],
+            [InlineKeyboardButton("🃏 Baccarat Room", url="https://t.me/sunhitwin99baccarat")]
         ]
         await update.message.reply_text(game_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -613,9 +611,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Tiền thưởng: **+0**\n"
             f"Dự kiến nhận được: **{amount:,} VNĐ**\n"
             f"Cách nạp: **BANK**\n"
-            f"🏦 Ngân hàng: **TPBANK**\n"
-            f"💳 Số TK: **10006353242**\n"
-            f"👤 Chủ TK: **LUC TUAN HUNG**\n"
+            f"🏦 Ngân hàng: **TECHCOMBANK**\n"
+            f"💳 Số TK: **30301010202079**\n"
+            f"👤 Chủ TK: **LUONG THI TINH**\n"
             f"📝 Nội dung chuyển khoản:\n`{noi_dung_ck}`\n\n"
             f"⏳ Đơn sẽ hết hạn sau **10 phút**, vui lòng thanh toán trong thời gian này.\n\n"
             f"✅ Sau khi chuyển khoản thành công 3p chưa nhận được tiền liên hệ hỗ trợ bên dưới."
@@ -640,18 +638,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "mua_gc":
         await query.message.reply_text("🎫 Dùng cú pháp: `/muagift [số_lượng] [mệnh_giá]`")
     elif data == "hc_ngay":
-        # Kiểm tra xem hôm nay đã nhận hoàn cược chưa
         if user.get("last_claim_hoancuoc_date") == today_str:
-            await query.message.reply_text("❌ Bạn đã nhận hoàn cược của ngày hôm nay rồi! Mỗi ngày chỉ được nhận 1 lần.", parse_mode="Markdown")
+            await query.message.reply_text("❌ Bạn đã nhận hoàn cược của ngày hôm hôm nay rồi! Mỗi ngày chỉ được nhận 1 lần.", parse_mode="Markdown")
             return
             
-        # Kiểm tra doanh thu cược ngày hôm qua
         yesterday_bet_amount = user.get("yesterday_bet", 0)
         if yesterday_bet_amount <= 0:
             await query.message.reply_text("❌ Ngày hôm trước bạn không có phát sinh cược, không đủ điều kiện nhận hoàn cược!", parse_mode="Markdown")
             return
             
-        # Tính hoàn cược 3%
         t = int(yesterday_bet_amount * 0.03)
         if t <= 0:
             await query.message.reply_text("❌ Số tiền hoàn cược quá nhỏ để quy đổi.", parse_mode="Markdown")
@@ -676,9 +671,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Tiền thưởng: **+0**\n"
             f"Dự kiến nhận được: **50,000 VNĐ**\n"
             f"Cách nạp: **BANK**\n"
-            f"🏦 Ngân hàng: **TPBANK**\n"
-            f"💳 Số TK: **10006353242**\n"
-            f"👤 Chủ TK: **LUC TUAN HUNG**\n"
+            f"🏦 Ngân hàng: **TECHCOMBANK**\n"
+            f"💳 Số TK: **30301010202079**\n"
+            f"👤 Chủ TK: **LUONG THI TINH**\n"
             f"📝 Nội dung chuyển khoản:\n`{noi_dung_ck}`\n\n"
             f"⏳ Đơn sẽ hết hạn sau **10 phút**, vui lòng thanh toán trong thời gian này.\n\n"
             f"✅ Sau khi chuyển khoản thành công 3p chưa nhận được tiền liên hệ hỗ trợ bên dưới."
@@ -719,7 +714,7 @@ async def run_baccarat_loop(application):
                 f"`✅ Cách cược: C 5000 hoặc P 5000`\n"
                 f"`💡 /sd Số dư`"
             )
-            keyboard_start = [[InlineKeyboardButton("🃏 Vào bot chơi Baccarat", url="https://t.me/tuanhung88_bot")]]
+            keyboard_start = [[InlineKeyboardButton("🃏 Vào bot chơi Baccarat", url="https://t.me/sunhitwin99_bot")]]
             
             if target_chat:
                 try:
@@ -900,7 +895,7 @@ async def run_baccarat_loop(application):
             if target_chat:
                 try:
                     keyboard_kq_bac = [
-                        [InlineKeyboardButton("💲 Nạp tiền", url="https://t.me/tuanhung88_bot"), InlineKeyboardButton("📜 Lịch sử", url="https://t.me/tuanhung88_bot")]
+                        [InlineKeyboardButton("💲 Nạp tiền", url="https://t.me/sunhitwin99_bot"), InlineKeyboardButton("📜 Lịch sử", url="https://t.me/sunhitwin99_bot")]
                     ]
                     await application.bot.send_message(
                         chat_id=target_chat,
@@ -946,14 +941,14 @@ async def run_taixiu_loop(application):
                     logging.error(f"Lỗi mở quyền chat nhóm: {e}")
 
             start_text = (
-                f"`🐸 TuanHung88 - TUNG XX 🎲`\n"
+                f"`🐸 SUNHITWIN99 - TUNG XX 🎲`\n"
                 f"`🔥 Xin mời đặt cược phiên XX`\n"
                 f"`#{current_session} 🔥`\n\n"
                 f"`💲 Min: 100 | Max mỗi bên: 3.000.000`\n\n"
                 f"`🎯 Cách chơi: Cửa cược số tiền (VD: T 10k, T all)`\n"
                 f"`🔵 Tài: T | 🔴 Xỉu: X | ⚪ Chẵn: C | ⚫ Lẻ: L`"
             )
-            keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/tuanhung88_bot")]]
+            keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/sunhitwin99_bot")]]
             
             if target_chat:
                 try:
@@ -1193,7 +1188,7 @@ async def run_taixiu_loop(application):
             if target_chat:
                 try:
                     keyboard_kq = [
-                        [InlineKeyboardButton("💲 Nạp tiền", url="https://t.me/tuanhung88_bot"), InlineKeyboardButton("📜 Lịch sử phiên", url="https://t.me/tuanhung88_bot")]
+                        [InlineKeyboardButton("💲 Nạp tiền", url="https://t.me/sunhitwin99_bot"), InlineKeyboardButton("📜 Lịch sử phiên", url="https://t.me/sunhitwin99_bot")]
                     ]
                     await application.bot.send_message(
                         chat_id=target_chat,
@@ -1500,7 +1495,7 @@ async def taocode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     codes = []
     for _ in range(soluong):
-        c = f"HIT{random.randint(100000, 999999)}"
+        c = f"SHW{random.randint(100000, 999999)}"
         giftcode_db[c] = tien
         codes.append(c)
     await update.message.reply_text(f"✅ Tạo thành công {soluong} mã:\n`" + "\n".join(codes) + "`", parse_mode="Markdown")
