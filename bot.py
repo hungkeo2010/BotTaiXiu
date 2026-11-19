@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import threading
+import urllib.parse
 from datetime import datetime
 from flask import Flask
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
@@ -59,6 +60,11 @@ ADMIN_IDS = [8517564121]
 GROUP_CHAT_ID = -1004222063034  
 BACCARAT_GROUP_CHAT_ID = -1003973244307  
 
+BANK_BIN = "970407"  # Techcombank
+BANK_NAME = "TECHCOMBANK"
+BANK_STK = "30301010202079"
+BANK_OWNER = "LUONG THI TINH"
+
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
 current_session = 200598
@@ -80,6 +86,11 @@ is_bac_betting_open = False
 
 is_loop_running = False  
 is_bac_loop_running = False
+
+def tao_link_qr(amount: int, noi_dung: str) -> str:
+    add_info = urllib.parse.quote(noi_dung)
+    account_name = urllib.parse.quote(BANK_OWNER)
+    return f"https://img.vietqr.io/image/{BANK_BIN}-{BANK_STK}-compact2.png?amount={amount}&addInfo={add_info}&accountName={account_name}"
 
 def get_user(user_id):
     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -394,7 +405,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         nap_text = (
             "✨ **HỆ THỐNG NẠP TIỀN TỰ ĐỘNG**\n\n"
             f"{x2_notice}\n\n"
-            "✨ Hoặc bấm nút số tiền bên dưới để lấy nhanh thông tin.\n\n"
+            "✨ Hoặc bấm nút số tiền bên dưới để lấy nhanh thông tin và mã QR.\n\n"
             "⚠️ **Lưu ý:**\n"
             "✅ Chuyển đúng **SỐ TIỀN** và **NỘI DUNG** được cung cấp.\n"
             "✅ Mỗi lần nạp cần lấy thông tin **MỚI** (Mã nạp hết hạn sau **10 phút**).\n"
@@ -598,11 +609,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         for admin_id in ADMIN_IDS:
             try:
-                await context.bot.send_message(chat_id=admin_id, text=f"🔔 **MÃ NẠP MỚI**\nID: `{user_id}`\nTiền: `{amount:,}đ`\nMã: `{magd}`\n👉 `/duyệt {magd}`", parse_mode="Markdown")
+                await context.bot.send_message(chat_id=admin_id, text=f"🔔 **MÃ NẠP MỚI**\nID: `{user_id}`\nTiền: `{amount:,}đ`\nMã: `{magd}`\n👉 `/duyet {magd}`", parse_mode="Markdown")
             except Exception:
                 pass
 
         noi_dung_ck = f"NAP{user_id}{random.randint(10000, 99999)}"
+        qr_url = tao_link_qr(amount, noi_dung_ck)
         caption_text = (
             f"🟩 **THÔNG TIN NẠP TIỀN**\n\n"
             f"🆔 ID: `{user_id}`\n"
@@ -611,14 +623,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Tiền thưởng: **+0**\n"
             f"Dự kiến nhận được: **{amount:,} VNĐ**\n"
             f"Cách nạp: **BANK**\n"
-            f"🏦 Ngân hàng: **TECHCOMBANK**\n"
-            f"💳 Số TK: **30301010202079**\n"
-            f"👤 Chủ TK: **LUONG THI TINH**\n"
+            f"🏦 Ngân hàng: **{BANK_NAME}**\n"
+            f"💳 Số TK: **{BANK_STK}**\n"
+            f"👤 Chủ TK: **{BANK_OWNER}**\n"
             f"📝 Nội dung chuyển khoản:\n`{noi_dung_ck}`\n\n"
             f"⏳ Đơn sẽ hết hạn sau **10 phút**, vui lòng thanh toán trong thời gian này.\n\n"
             f"✅ Sau khi chuyển khoản thành công 3p chưa nhận được tiền liên hệ hỗ trợ bên dưới."
         )
-        await query.message.reply_text(caption_text, parse_mode="Markdown")
+        await query.message.reply_photo(photo=qr_url, caption=caption_text, parse_mode="Markdown")
 
     elif data == "ls_nap":
         u = get_user(user_id)
@@ -639,7 +651,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("🎫 Dùng cú pháp: `/muagift [số_lượng] [mệnh_giá]`")
     elif data == "hc_ngay":
         if user.get("last_claim_hoancuoc_date") == today_str:
-            await query.message.reply_text("❌ Bạn đã nhận hoàn cược của ngày hôm hôm nay rồi! Mỗi ngày chỉ được nhận 1 lần.", parse_mode="Markdown")
+            await query.message.reply_text("❌ Bạn đã nhận hoàn cược của ngày hôm nay rồi! Mỗi ngày chỉ được nhận 1 lần.", parse_mode="Markdown")
             return
             
         yesterday_bet_amount = user.get("yesterday_bet", 0)
@@ -659,10 +671,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "ho_tro":
         await query.message.reply_text("🎧 Hỗ trợ 24/7.")
     elif data == "nap_nganhang":
+        amount = 50000
         magd = random.randint(100000, 999999)
-        pending_nap[str(magd)] = {"user_id": user_id, "amount": 50000}
+        pending_nap[str(magd)] = {"user_id": user_id, "amount": amount}
+
+        for admin_id in ADMIN_IDS:
+            try:
+                await context.bot.send_message(chat_id=admin_id, text=f"🔔 **MÃ NẠP MỚI**\nID: `{user_id}`\nTiền: `{amount:,}đ`\nMã: `{magd}`\n👉 `/duyet {magd}`", parse_mode="Markdown")
+            except Exception:
+                pass
         
         noi_dung_ck = f"NAP{user_id}{random.randint(10000, 99999)}"
+        qr_url = tao_link_qr(amount, noi_dung_ck)
         caption_text = (
             f"🟩 **THÔNG TIN NẠP TIỀN**\n\n"
             f"🆔 ID: `{user_id}`\n"
@@ -671,14 +691,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Tiền thưởng: **+0**\n"
             f"Dự kiến nhận được: **50,000 VNĐ**\n"
             f"Cách nạp: **BANK**\n"
-            f"🏦 Ngân hàng: **TECHCOMBANK**\n"
-            f"💳 Số TK: **30301010202079**\n"
-            f"👤 Chủ TK: **LUONG THI TINH**\n"
+            f"🏦 Ngân hàng: **{BANK_NAME}**\n"
+            f"💳 Số TK: **{BANK_STK}**\n"
+            f"👤 Chủ TK: **{BANK_OWNER}**\n"
             f"📝 Nội dung chuyển khoản:\n`{noi_dung_ck}`\n\n"
             f"⏳ Đơn sẽ hết hạn sau **10 phút**, vui lòng thanh toán trong thời gian này.\n\n"
             f"✅ Sau khi chuyển khoản thành công 3p chưa nhận được tiền liên hệ hỗ trợ bên dưới."
         )
-        await query.message.reply_text(caption_text, parse_mode="Markdown")
+        await query.message.reply_photo(photo=qr_url, caption=caption_text, parse_mode="Markdown")
 
 # --- VÒNG LẶP GAME BACCARAT TỰ ĐỘNG ---
 async def run_baccarat_loop(application):
