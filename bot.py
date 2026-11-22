@@ -57,15 +57,15 @@ pending_nap = {}
 pending_rut = {}
 
 # --- CẤU HÌNH TOKEN & ID NHÓM ---
-TOKEN = "9225630039:AAHVUyiJVZMgUPr77vvpPKtV-DQXXZVUG8I"
-ADMIN_IDS = [8517564121, 8682451039]
-GROUP_CHAT_ID = -1004222063034
+TOKEN = "9299899683:AAEKC3E04UKjL-V0YzH5qYv2hOp0JKAp95Y"
+ADMIN_IDS = [8682451039]
+GROUP_CHAT_ID = -1004434938082
 BACCARAT_GROUP_CHAT_ID = -1003973244307
 
-BANK_BIN = "970407"  # Techcombank
-BANK_NAME = "TECHCOMBANK"
-BANK_STK = "30301010202079"
-BANK_OWNER = "LUONG THI TINH"
+BANK_BIN = "970423"  # TPBank
+BANK_NAME = "TPBANK"
+BANK_STK = "10006353242"
+BANK_OWNER = "LUC TUAN HUNG"
 
 # Biến toàn cục quản lý phiên Tài Xỉu
 forced_dice_result = None
@@ -96,7 +96,7 @@ def tao_link_qr(amount: int, noi_dung: str) -> str:
 
 def _fetch_qr_bytes(qr_url: str) -> io.BytesIO:
     req = urllib.request.Request(qr_url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=8) as resp:
+    with urllib.request.urlopen(req, timeout=6) as resp:
         img_bytes = io.BytesIO(resp.read())
         img_bytes.name = "vietqr.png"
         return img_bytes
@@ -168,10 +168,7 @@ def get_main_menu():
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-async def gui_thong_tin_nap(message_target, context: ContextTypes.DEFAULT_TYPE, user_id: int, amount: int):
-    magd = str(random.randint(100000, 999999))
-    pending_nap[magd] = {"user_id": user_id, "amount": amount}
-
+async def _notify_admins_nap(context: ContextTypes.DEFAULT_TYPE, user_id: int, amount: int, magd: str):
     for admin_id in ADMIN_IDS:
         try:
             await context.bot.send_message(
@@ -181,6 +178,12 @@ async def gui_thong_tin_nap(message_target, context: ContextTypes.DEFAULT_TYPE, 
             )
         except Exception as e:
             logging.error(f"Lỗi gửi thông báo nạp cho admin {admin_id}: {e}")
+
+async def gui_thong_tin_nap(message_target, context: ContextTypes.DEFAULT_TYPE, user_id: int, amount: int):
+    magd = str(random.randint(100000, 999999))
+    pending_nap[magd] = {"user_id": user_id, "amount": amount}
+
+    asyncio.create_task(_notify_admins_nap(context, user_id, amount, magd))
 
     noi_dung_ck = f"NAP{user_id}{random.randint(10000, 99999)}"
     qr_url = tao_link_qr(amount, noi_dung_ck)
