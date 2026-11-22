@@ -56,13 +56,13 @@ giftcode_db = {}
 pending_nap = {}
 pending_rut = {}
 
-# --- CẤU HÌNH TOKEN & ID NHÓM ---
+# --- CẤU HÌNH TOKEN, ID NHÓM & ĐƯỜNG DẪN ---
 TOKEN = "9299899683:AAEKC3E04UKjL-V0YzH5qYv2hOp0JKAp95Y"
-ADMIN_IDS = [8682451039]
+ADMIN_IDS = [8517564121, 8682451039]
 GROUP_CHAT_ID = -1004434938082
 BACCARAT_GROUP_CHAT_ID = -1004290084978
 
-BOT_URL = "https://t.me/sunhitwin99_bot"
+BOT_URL = "https://t.me/sunhitwinroom_bot"
 TAIXIU_ROOM_URL = "https://t.me/Chatsunhitwin99"
 BACCARAT_ROOM_URL = "https://t.me/bcrsunhitwin99"
 
@@ -189,7 +189,7 @@ async def gui_thong_tin_nap(message_target, context: ContextTypes.DEFAULT_TYPE, 
 
     asyncio.create_task(_notify_admins_nap(context, user_id, amount, magd))
 
-    noi_dung_ck = f"NAP{user_id}{random.randint(10000, 99999)}"
+    noi_dung_ck = f"SHW{user_id}{random.randint(10000, 99999)}"
     qr_url = tao_link_qr(amount, noi_dung_ck)
     current_balance = get_user(user_id)["balance"]
 
