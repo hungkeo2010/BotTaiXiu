@@ -62,6 +62,10 @@ ADMIN_IDS = [8682451039]
 GROUP_CHAT_ID = -1004434938082
 BACCARAT_GROUP_CHAT_ID = -1004290084978
 
+BOT_URL = "https://t.me/sunhitwin99_bot"
+TAIXIU_ROOM_URL = "https://t.me/Chatsunhitwin99"
+BACCARAT_ROOM_URL = "https://t.me/bcrsunhitwin99"
+
 BANK_BIN = "970423"  # TPBank
 BANK_NAME = "TPBANK"
 BANK_STK = "10006353242"
@@ -250,7 +254,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🎁 **QUY ĐỊNH NẠP & RÚT:**\n"
         f"• **Nạp lần đầu:** X2 số tiền (Yêu cầu vòng cược **x4** mới được rút)\n"
         f"• **Nạp từ lần 2:** Yêu cầu vòng cược **x2** mới được rút\n\n"
-        f"🏛️ Tham gia Room TX để săn hũ và nhận giftcode hằng ngày https://t.me/sunhitwin99chat"
+        f"🏛️ Tham gia Room TX để săn hũ và nhận giftcode hằng ngày {TAIXIU_ROOM_URL}"
     )
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=get_main_menu())
 
@@ -502,8 +506,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Vui lòng chọn phòng game bạn muốn tham gia:"
         )
         keyboard = [
-            [InlineKeyboardButton("🎲 Tài Xỉu Room", url="https://t.me/sunhitwin99chat")],
-            [InlineKeyboardButton("🃏 Baccarat Room", url="https://t.me/sunhitwin99baccarat")]
+            [InlineKeyboardButton("🎲 Tài Xỉu Room", url=TAIXIU_ROOM_URL)],
+            [InlineKeyboardButton("🃏 Baccarat Room", url=BACCARAT_ROOM_URL)]
         ]
         await update.message.reply_text(game_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -775,7 +779,7 @@ async def run_baccarat_loop(application):
                 f"`✅ Cách cược: C 5000 hoặc P 5000`\n"
                 f"`💡 /sd Số dư`"
             )
-            keyboard_start = [[InlineKeyboardButton("🃏 Vào bot chơi Baccarat", url="https://t.me/sunhitwin99_bot")]]
+            keyboard_start = [[InlineKeyboardButton("🃏 Vào bot chơi Baccarat", url=BOT_URL)]]
 
             if target_chat:
                 try:
@@ -956,7 +960,7 @@ async def run_baccarat_loop(application):
             if target_chat:
                 try:
                     keyboard_kq_bac = [
-                        [InlineKeyboardButton("💲 Nạp tiền", url="https://t.me/sunhitwin99_bot"), InlineKeyboardButton("📜 Lịch sử", url="https://t.me/sunhitwin99_bot")]
+                        [InlineKeyboardButton("💲 Nạp tiền", url=BOT_URL), InlineKeyboardButton("📜 Lịch sử", url=BOT_URL)]
                     ]
                     await application.bot.send_message(
                         chat_id=target_chat,
@@ -1009,7 +1013,7 @@ async def run_taixiu_loop(application):
                 f"`🎯 Cách chơi: Cửa cược số tiền (VD: T 10k, T all)`\n"
                 f"`🔵 Tài: T | 🔴 Xỉu: X | ⚪ Chẵn: C | ⚫ Lẻ: L`"
             )
-            keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url="https://t.me/sunhitwin99_bot")]]
+            keyboard_start = [[InlineKeyboardButton("🐸 Vào bot chơi", url=BOT_URL)]]
 
             if target_chat:
                 try:
@@ -1249,7 +1253,7 @@ async def run_taixiu_loop(application):
             if target_chat:
                 try:
                     keyboard_kq = [
-                        [InlineKeyboardButton("💲 Nạp tiền", url="https://t.me/sunhitwin99_bot"), InlineKeyboardButton("📜 Lịch sử phiên", url="https://t.me/sunhitwin99_bot")]
+                        [InlineKeyboardButton("💲 Nạp tiền", url=BOT_URL), InlineKeyboardButton("📜 Lịch sử phiên", url=BOT_URL)]
                     ]
                     await application.bot.send_message(
                         chat_id=target_chat,
